@@ -1,0 +1,4 @@
+[
+  { "id": 1, "cliente": "Empresa A", "origen": "Córdoba", "destino": "Buenos Aires", "estado": "En tránsito", "actualizacion": "2025-08-18" },
+  { "id": 2, "cliente": "Empresa B", "origen": "Rosario", "destino": "Mendoza", "estado": "Pendiente", "actualizacion": "2025-08-19" }
+]
