@@ -9,55 +9,40 @@
 <body>
 <!-- Header -->
 <div class="header">
-    <h2>Zuidwijk & Asoc. SRL</h2>
+    <h2>Zuidwijk & Asoc. SRL - Panel Administrativo</h2>
     <button onclick="cerrarSesion()">Cerrar sesión</button>
 </div>
 
-<!-- Layout con sidebar -->
-<div class="layout">
-    <!-- Sidebar -->
-    <nav class="sidebar">
-        <ul>
-            <li><a href="#"><span>📦</span> Envíos</a></li>
-            <li><a href="#"><span>🚚</span> Proveedores</a></li>
-            <li><a href="#"><span>📊</span> Reportes</a></li>
-            <li><a href="#"><span>⚙️</span> Configuración</a></li>
-        </ul>
-    </nav>
+<!-- Contenido principal -->
+<div class="card">
+    <h3>📦 Envíos</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Destino</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="tablaEnvios"></tbody>
+    </table>
+</div>
 
-    <!-- Contenido principal -->
-    <main class="content">
-        <div class="card">
-            <h3>📦 Envíos</h3>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-                </thead>
-                <tbody id="tablaEnvios"></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h3>🚚 Proveedores</h3>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Servicio</th>
-                    <th>Acciones</th>
-                </tr>
-                </thead>
-                <tbody id="tablaProveedores"></tbody>
-            </table>
-        </div>
-    </main>
+<div class="card">
+    <h3>🚚 Proveedores</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Servicio</th>
+            <th>Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="tablaProveedores"></tbody>
+    </table>
 </div>
 
 <script src="assets/js/dashboard_admin.js"></script>

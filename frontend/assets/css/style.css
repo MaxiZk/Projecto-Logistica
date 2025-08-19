@@ -1,53 +1,5 @@
-/* Fuente moderna */
+/* ======== FUENTE ======== */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-
-/* Layout con sidebar */
-.layout {
- display: flex;
-}
-
-/* Sidebar */
-.sidebar {
- width: 220px;
- background: #1a73e8;
- color: white;
- min-height: 100vh;
- padding-top: 20px;
- position: fixed;
- top: 60px; /* bajo el header */
- left: 0;
-}
-
-.sidebar ul {
- list-style: none;
- padding: 0;
- margin: 0;
-}
-
-.sidebar li {
- margin: 15px 0;
-}
-
-.sidebar a {
- text-decoration: none;
- color: white;
- padding: 12px 20px;
- display: flex;
- align-items: center;
- font-weight: 500;
-}
-
-.sidebar a:hover {
- background: #155bb5;
- border-radius: 5px;
-}
-
-/* Contenido principal */
-.content {
- margin-left: 240px; /* espacio para sidebar */
- padding: 20px;
- width: 100%;
-}
 
 body {
  font-family: 'Poppins', sans-serif;
@@ -56,85 +8,71 @@ body {
  color: #333;
 }
 
-/* Header */
+/* ======== LAYOUT ======== */
+.layout {
+ display: flex;
+}
+
+/* ======== SIDEBAR ======== */
+.sidebar {
+ width: 220px;
+ background: #1d1d49;           /* 👉 mismo color que header */
+ color: #fff;
+ min-height: 100vh;
+ padding-top: 90px;             /* espacio bajo el header */
+ position: fixed;
+ top: 0;
+ left: 0;
+ border-right: 1px solid #2c3145; /* separación sutil */
+ box-shadow: 2px 0 5px rgba(0,0,0,0.15);
+}
+
+/* Lista del menú: separadores entre ítems */
+.sidebar ul li{
+ position: relative;
+ margin: 0;
+}
+
+.sidebar ul li + li{
+ border-top: 1px solid rgba(255,255,255,.08);
+}
+
+/* ======== HEADER ======== */
 .header {
- background-color: #1a73e8;
- color: white;
- padding: 15px 20px;
+ position: fixed;
+ top: 0;
+ left: 0;                       /* 👉 arranca al mismo nivel que sidebar */
+ right: 0;
+ height: 70px;
  display: flex;
  justify-content: space-between;
  align-items: center;
- box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+ background: #1d1d49;           /* 👉 mismo color que sidebar */
+ color: #fff;
+ padding: 0 20px;
+ box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+ z-index: 1000;
+ border-bottom: 1px solid #2c3145; /* línea divisoria abajo */
 }
 
-/* Tarjetas */
-.card {
- background: white;
- border-radius: 10px;
- padding: 20px;
- margin: 20px;
- box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* Header-left para logo + texto */
+.header-left {
+ display: flex;
+ align-items: center;
+ gap: 12px;
 }
 
-/* Tablas */
-table {
- width: 100%;
- border-collapse: collapse;
- margin-top: 15px;
+.header-logo {
+ height: 45px;
+ width: auto;
+ border-radius: 6px;
+ object-fit: contain;
 }
 
-th, td {
- padding: 12px;
- text-align: left;
-}
-
-thead {
- background-color: #1a73e8;
- color: white;
-}
-
-tr:nth-child(even) {
- background-color: #f2f2f2;
-}
-
-tr:hover {
- background-color: #e8f0fe;
-}
-
-button {
- background: #1a73e8;
- border: none;
- padding: 6px 12px;
- border-radius: 5px;
- color: white;
- cursor: pointer;
- font-size: 14px;
-}
-
-button:hover {
- background: #155bb5;
-}
-
-/* Estados */
-.estado {
- padding: 4px 10px;
- border-radius: 12px;
- font-size: 12px;
- font-weight: bold;
- text-transform: uppercase;
-}
-
-.estado.entregado {
- background: #d4f6dd;
- color: #2e7d32;
-}
-
-.estado.transito {
- background: #fff3cd;
- color: #856404;
-}
-
-.estado.demorado {
- background: #f8d7da;
- color: #721c24;
+/* ======== CONTENIDO ======== */
+.main {
+ margin-left: 220px;             /* espacio del sidebar */
+ padding-top: 90px;              /* espacio debajo del header */
+ min-height: 100vh;
+ background: #f5f7fa;
 }

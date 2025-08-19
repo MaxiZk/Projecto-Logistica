@@ -12,11 +12,6 @@
 <div id="app" class="d-flex">
     <!-- Sidebar -->
     <nav id="sidebar" class="sidebar bg-dark text-white">
-        <div class="sidebar-header p-3 text-center border-bottom">
-            <img src="" alt="Logo" id="logo" style="width:72px;height:72px;border-radius:8px;background:#fff;margin-bottom:8px;">
-            <h5 class="m-0">Zuidwijk &amp; Asoc. SRL</h5>
-            <small class="text-muted d-block">Soluciones Logísticas</small>
-        </div>
         <ul class="nav flex-column p-2" id="menu">
             <li class="nav-item"><a class="nav-link text-white active" data-route="home" href="#">🏠 Inicio</a></li>
             <li class="nav-item"><a class="nav-link text-white" data-route="cargas" href="#">📦 Gestión de Cargas</a></li>
@@ -31,22 +26,71 @@
 
     <!-- Main content -->
     <div class="main flex-fill">
-        <header class="d-flex justify-content-between align-items-center p-3 border-bottom bg-white">
-            <div>
-                <h4 class="m-0" id="page-title">Inicio</h4>
-                <small class="text-muted" id="page-subtitle">Resumen operativo</small>
-            </div>
-            <div class="d-flex align-items-center">
-                <div class="me-3 text-end">
-                    <div class="fw-bold" id="user-name">Admin</div>
-                    <small class="text-muted">zuidwijk@empresa.com</small>
+        <!-- Header con imagen -->
+        <header class="header">
+            <div class="header-left">
+                <img src="./assets/img/header.jpg" class="header-logo" alt="Logo">
+                <div>
+                    <h4>Zuidwijk &amp; Asoc. SRL</h4>
+                    <small>Soluciones Logísticas</small>
                 </div>
-                <img src="" alt="avatar" style="width:44px;height:44px;border-radius:50%;background:#dee2e6;">
+            </div>
+            <div class="header-right">
             </div>
         </header>
 
+
+
         <main class="p-4" id="view">
             <!-- Views get injected here by app.js -->
+            <!-- Información de la empresa (siempre visible) -->
+            <section class="landing-intro">
+                <div class="container">
+                    <div class="card intro-card">
+                        <div class="intro-body">
+                            <h3 class="intro-title">Zuidwijk &amp; Asociados SRL</h3>
+
+                            <p>
+                                Zuidwijk &amp; Asociados es una <strong>empresa joven</strong>, pero con personal de amplia y reconocida
+                                experiencia en el mercado.
+                            </p>
+
+                            <p>
+                                Somos <strong>Consultores en Comercio Exterior</strong>. Esto implica el análisis global de su negocio:
+                                desde su posición en el sector productivo, sus competidores, su ubicación geográfica y el impacto
+                                en su cadena logística, hasta el asesoramiento en cómo optimizarla para mejorar sus tiempos y
+                                rentabilidad.
+                            </p>
+
+                            <p>
+                                Como facilitadores del comercio, nuestra <strong>misión</strong> es ofrecer servicios integrales en el
+                                manejo de mercaderías, optimizando los beneficios de nuestros clientes y agregando valor,
+                                basados en la <strong>responsabilidad y experiencia</strong> de nuestra gente.
+                            </p>
+
+                            <h5 class="intro-subtitle">Trabajamos con aliados estratégicos en:</h5>
+                            <ul class="intro-list">
+                                <li>Terminales portuarias</li>
+                                <li>Transportistas</li>
+                                <li>Despachantes</li>
+                                <li>Depósitos para des/consolidados</li>
+                                <li>Seguros</li>
+                            </ul>
+
+                            <h5 class="intro-subtitle">¿Por qué elegirnos?</h5>
+                            <p>
+                                Porque somos una opción diferente: vemos su negocio como propio y lo analizamos desde todas las
+                                perspectivas para juntos encontrar la forma de hacerlo más productivo.
+                            </p>
+                            <p class="mb-0">
+                                Nuestro objetivo es ser reconocidos como su <strong>facilitador global de Comercio y Servicios
+                                Logísticos</strong>, brindando un apoyo sólido y confiable a su empresa.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
         <footer class="p-3 text-center text-muted border-top small">© 2025 Zuidwijk y Asoc. SRL</footer>

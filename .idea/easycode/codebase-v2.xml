@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="com.obiscr.chatgpt.settings.EasyCodeState">
+    <option name="projectFiles" value="$PROJECT_DIR$/backend/models/envios.json;D:/facultad/Logistica/backend/models/proveedores.json;D:/facultad/Logistica/backend/routes/auth.js;D:/facultad/Logistica/backend/routes/documentos.js;D:/facultad/Logistica/backend/routes/envios.js;D:/facultad/Logistica/backend/routes/proveedores.js;D:/facultad/Logistica/backend/app.js;D:/facultad/Logistica/database/schema.sql;D:/facultad/Logistica/frontend/assets/css/style.css;D:/facultad/Logistica/frontend/assets/js/app.js;D:/facultad/Logistica/frontend/assets/js/dashboard_admin.js;D:/facultad/Logistica/frontend/assets/js/dashboard_cliente.js;D:/facultad/Logistica/frontend/assets/js/login.js;D:/facultad/Logistica/frontend/dashboard_admin.html;D:/facultad/Logistica/frontend/dashboard_cliente.html;D:/facultad/Logistica/frontend/index.html;D:/facultad/Logistica/frontend/login.html;D:/facultad/Logistica/README.md" />
+  </component>
+</project>
