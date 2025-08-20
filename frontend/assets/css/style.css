@@ -9,17 +9,15 @@ body {
 }
 
 /* ======== LAYOUT ======== */
-.layout {
- display: flex;
-}
+.layout { display: flex; }
 
 /* ======== SIDEBAR ======== */
 .sidebar {
  width: 220px;
- background: #1d1d49;           /* 👉 mismo color que header */
+ background: #1d1d49;           /* mismo color que header */
  color: #fff;
  min-height: 100vh;
- padding-top: 90px;             /* espacio bajo el header */
+ padding-top: 90px;             /* empuja bajo header */
  position: fixed;
  top: 0;
  left: 0;
@@ -27,58 +25,110 @@ body {
  box-shadow: 2px 0 5px rgba(0,0,0,0.15);
 }
 
-/* Lista del menú: separadores entre ítems */
-.sidebar ul li{
- position: relative;
- margin: 0;
-}
+.sidebar-header h6 { font-weight: 600; }
 
-.sidebar ul li + li{
- border-top: 1px solid rgba(255,255,255,.08);
+.sidebar ul { list-style: none; padding: 0; margin: 0; }
+.sidebar ul li { position: relative; margin: 0; }
+.sidebar ul li + li { border-top: 1px solid rgba(255,255,255,.08); }
+
+.sidebar a {
+ text-decoration: none;
+ color: white;
+ padding: 12px 16px;
+ display: flex;
+ align-items: center;
+ font-weight: 500;
+ border-radius: 8px;
+ margin: 4px 8px;
+}
+.sidebar a:hover { background: rgba(255,255,255,.10); }
+.sidebar a.active{
+ background: rgba(255,255,255,.12);
+ border: 1px solid rgba(255,255,255,.18);
+ box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.sidebar a.active::before{
+ content:"";
+ position:absolute;
+ left: 0;
+ top: 8px;
+ bottom: 8px;
+ width: 3px;
+ border-radius: 3px;
+ background: #ffd166; /* acento */
 }
 
 /* ======== HEADER ======== */
 .header {
  position: fixed;
- top: 0;
- left: 0;                       /* 👉 arranca al mismo nivel que sidebar */
- right: 0;
+ top: 0; left: 0; right: 0;
  height: 70px;
  display: flex;
  justify-content: space-between;
  align-items: center;
- background: #1d1d49;           /* 👉 mismo color que sidebar */
+ background: #1d1d49;           /* mismo color que sidebar */
  color: #fff;
  padding: 0 20px;
  box-shadow: 0 2px 5px rgba(0,0,0,0.25);
  z-index: 1000;
- border-bottom: 1px solid #2c3145; /* línea divisoria abajo */
+ border-bottom: 1px solid #2c3145;
 }
 
-/* Header-left para logo + texto */
-.header-left {
- display: flex;
- align-items: center;
- gap: 12px;
-}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-logo { height: 45px; width: auto; border-radius: 6px; object-fit: contain; }
 
-.header-logo {
- height: 45px;
- width: auto;
- border-radius: 6px;
- object-fit: contain;
+.header-left h4 { margin: 0; font-size: 18px; font-weight: 600; color: #fff !important; }
+.header-left small { color: #e9f1ff; }
+
+.header-right { display: flex; align-items: center; gap: 10px; }
+.header-right img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; }
+
+/* Barra de título bajo el header */
+.page-bar{
+ margin-top:70px;
+ border-bottom:1px solid #e7ebf0;
+ background:#fff;
 }
 
 /* ======== CONTENIDO ======== */
-.main {
- margin-left: 220px;             /* espacio del sidebar */
- padding-top: 90px;              /* espacio debajo del header */
- min-height: 100vh;
- background: #f5f7fa;
+.main { margin-left: 220px; min-height: 100vh; background: #f5f7fa; }
+.content { margin-left: 0; padding: 20px; width: 100%; }
+
+/* Contenedor de la vista para alinear y separar secciones */
+#view{ max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
+
+/* Tarjetas y secciones */
+.card{
+ margin: 16px 0;
+ border: 1px solid #e7ebf0;
+ box-shadow: 0 4px 14px rgba(16,24,40,.06);
+}
+.section + .section{
+ margin-top: 24px;
+ padding-top: 16px;
+ border-top: 1px dashed #e2e8f0;
 }
 
-#menu a.active{
- background: rgba(255,255,255,.12);
- border-radius: 8px;
- border: 1px solid rgba(255,255,255,.18);
+/* ====== TABLAS ====== */
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { padding: 12px; text-align: left; }
+thead { background-color: #1a73e8; color: white; }
+tr:nth-child(even) { background-color: #f2f2f2; }
+tr:hover { background-color: #e8f0fe; }
+
+/* ===== BOTONES ===== */
+button, .btn { font-size: 14px; }
+.btn-primary { background:#1a73e8; border-color:#1a73e8; }
+.btn-primary:hover { background:#155bb5; border-color:#155bb5; }
+
+/* ===== ESTADOS ===== */
+.estado {
+ padding: 4px 10px;
+ border-radius: 12px;
+ font-size: 12px;
+ font-weight: bold;
+ text-transform: uppercase;
 }
+.estado.entregado { background: #d4f6dd; color: #2e7d32; }
+.estado.transito   { background: #fff3cd; color: #856404; }
+.estado.demorado   { background: #f8d7da; color: #721c24; }

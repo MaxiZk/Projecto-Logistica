@@ -1,56 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin - Logística</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Dashboard Admin - Zuidwijk & Asoc. SRL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
 </head>
 <body>
-<!-- Header -->
-<div class="header">
-    <h2>Zuidwijk & Asoc. SRL - Panel Administrativo</h2>
-    <button onclick="cerrarSesion()">Cerrar sesión</button>
+<div id="app" class="layout">
+
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-header p-3 text-center border-bottom-0">
+            <img src="assets/img/logo.png" alt="Logo" class="header-logo" style="height:48px;width:auto;border-radius:6px;">
+            <h6 class="mt-2 mb-0">Zuidwijk &amp; Asoc. SRL</h6>
+            <small class="text-white-50">Admin</small>
+        </div>
+
+        <ul class="nav flex-column p-2" id="menu">
+            <li class="nav-item"><a class="nav-link text-white" data-route="home" href="index.html#home">🏠 Inicio público</a></li>
+            <li class="nav-item"><a class="nav-link text-white active" data-route="cargas" href="#">📦 Cargas</a></li>
+            <li class="nav-item"><a class="nav-link text-white" data-route="aduana" href="#">🛃 Aduana</a></li>
+            <li class="nav-item"><a class="nav-link text-white" data-route="almacen" href="#">🏪 Almacen</a></li>
+            <li class="nav-item"><a class="nav-link text-white" data-route="clientes" href="#">👥 Atención al Cliente</a></li>
+            <li class="nav-item"><a class="nav-link text-white" data-route="admin" href="#">⚙️ Administración</a></li>
+            <li class="nav-item mt-2"><a class="nav-link text-white" id="logout" href="#">🔒 Cerrar sesión</a></li>
+        </ul>
+    </nav>
+
+    <div class="main">
+        <header class="header">
+            <div class="header-left">
+                <img src="assets/img/logo.png" class="header-logo" alt="Logo">
+                <div>
+                    <h4 class="m-0">Zuidwijk &amp; Asoc. SRL</h4>
+                    <small>Panel de Administración</small>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="text-end">
+                    <div class="fw-bold" id="user-name">Admin</div>
+                    <small class="text-white-50" id="user-email">admin@empresa.com</small>
+                </div>
+                <img src="assets/img/avatar.png" alt="avatar">
+            </div>
+        </header>
+
+        <div class="p-3" style="margin-top:70px;border-bottom:1px solid #e7ebf0;background:#fff;">
+            <h5 id="page-title" class="m-0">Gestión</h5>
+            <small class="text-muted" id="page-subtitle">Cargas, Aduana, Almacén, Clientes y Administración</small>
+        </div>
+
+        <main class="content" id="view"></main>
+
+        <footer class="p-3 text-center text-muted border-top small">© 2025 Zuidwijk y Asoc. SRL</footer>
+    </div>
 </div>
 
-<!-- Contenido principal -->
-<div class="card">
-    <h3>📦 Envíos</h3>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Destino</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-        </tr>
-        </thead>
-        <tbody id="tablaEnvios"></tbody>
-    </table>
+<!-- Modal -->
+<div class="modal fade" id="appModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="appModalLabel" class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div id="appModalBody" class="modal-body"></div>
+            <div id="appModalFooter" class="modal-footer"></div>
+        </div>
+    </div>
 </div>
 
-<div class="card">
-    <h3>🚚 Proveedores</h3>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nombre</th>
-            <th>Servicio</th>
-            <th>Acciones</th>
-        </tr>
-        </thead>
-        <tbody id="tablaProveedores"></tbody>
-    </table>
-</div>
-
-<script src="assets/js/dashboard_admin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
 <script>
-    function cerrarSesion() {
-        localStorage.clear();
-        window.location.href = "login.html";
-    }
+    // Forzar rol admin si no está autenticado como tal
+    (function(){
+        const role = localStorage.getItem('sessionRole');
+        if (role !== 'ADMIN') {
+            window.location.href = 'login.html';
+            return;
+        }
+        // Ir a cargas por defecto
+        if (!location.hash) location.hash = 'cargas';
+    })();
 </script>
 </body>
 </html>
