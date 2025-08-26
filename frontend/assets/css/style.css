@@ -132,3 +132,10 @@ button, .btn { font-size: 14px; }
 .estado.entregado { background: #d4f6dd; color: #2e7d32; }
 .estado.transito   { background: #fff3cd; color: #856404; }
 .estado.demorado   { background: #f8d7da; color: #721c24; }
+
+/* Asegurar que el modal quede por encima del header y sidebar */
+.modal { z-index: 2000 !important; }
+.modal-backdrop { z-index: 1990 !important; }
+
+/* Por si alguna animación queda “pegada” */
+.modal.show .modal-dialog { transform: none !important; }
