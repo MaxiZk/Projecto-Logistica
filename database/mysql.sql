@@ -5,11 +5,9 @@
 -- ============================================================
 
 -- 1) Base de datos
-CREATE DATABASE IF NOT EXISTS `logistica`
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `sigl` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
-USE `logistica`;
+USE `sigl`;
 
 -- ============================================================
 -- 2) Tabla: factura  (persistencia real usada por el backend)

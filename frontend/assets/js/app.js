@@ -154,23 +154,16 @@ const Views = {
 
   admin: () => `
   <div class="card p-3">
-    <h5 class="mb-2">Administración</h5>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card p-3">
-          <h6>Facturación</h6>
-          <button class="btn btn-primary btn-sm" id="btnIrFacturas">Ir a Facturas</button>
-          <button class="btn btn-outline-primary btn-sm ms-2" id="btnEmitirFactura">Emitir factura</button>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card p-3">
-          <h6>Proveedores</h6>
-          <button class="btn btn-outline-secondary btn-sm" id="btnListaProv">Listado</button>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="m-0">Administración</h5>
+      <div>
+        <button class="btn btn-outline-secondary btn-sm me-2" id="btnVerFacturas">Ver facturas</button>
+        <button class="btn btn-primary btn-sm" id="btnEmitirFactura">Emitir factura</button>
       </div>
     </div>
-  </div>`,
+    <div class="text-muted small">Emití nuevas facturas y consultá las emitidas.</div>
+  </div>
+`,
 
   facturas: () => `
   <div class="card p-3">
@@ -284,12 +277,17 @@ function chipEstado(e){
     'En preparación':'estado transito','Demorado':'estado demorado'};
   return `<span class="${map[e]||'estado'}">${e}</span>`;
 }
+
+/* ============= MODAL (instancia única) ============= */
 let APP_MODAL = null, APP_MODAL_EL = null;
+
 function ensureModal() {
   if (!APP_MODAL_EL) APP_MODAL_EL = document.getElementById('appModal');
-  if (!APP_MODAL) APP_MODAL = bootstrap.Modal.getOrCreateInstance(APP_MODAL_EL, {
-    backdrop:true, keyboard:true
-  });
+  if (!APP_MODAL) {
+    APP_MODAL = bootstrap.Modal.getOrCreateInstance(APP_MODAL_EL, {
+      backdrop: true, keyboard: true
+    });
+  }
   return APP_MODAL;
 }
 function openModal({ title = '', body = '', footer = '' }) {
@@ -299,11 +297,6 @@ function openModal({ title = '', body = '', footer = '' }) {
   document.getElementById('appModalFooter').innerHTML = footer || `
     <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>`;
   APP_MODAL.show();
-}
-async function fetchJSON(url, opts = {}) {
-  const res = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
 }
 
 /* ===== Cargas (CRUD demo) ===== */
@@ -513,37 +506,41 @@ function bindTicketsEvents(){
 
 /* ===== Facturas (con backend) ===== */
 async function cargarFacturas() {
-  const q = document.getElementById('filterCliente')?.value?.trim() || '';
-  const url = q ? `${API_BASE}/facturas?cliente=${encodeURIComponent(q)}` : `${API_BASE}/facturas`;
-  return fetchJSON(url);
-}
-function renderTablaFacturas(items) {
-  const tb = document.getElementById('tablaFacturas');
-  if (!tb) return;
-  if (!items || items.length === 0) {
-    tb.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Sin registros</td></tr>`;
-    return;
+  try {
+    const res = await fetch('http://localhost:8080/api/facturas');
+    const data = await res.json();
+    openModal({
+      title: 'Facturas',
+      body: `
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr>
+              <th>#</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th>
+            </tr></thead>
+            <tbody>
+              ${data.map(f => `
+                <tr>
+                  <td>${f.id ?? ''}</td>
+                  <td>${f.cliente ?? ''}</td>
+                  <td>${f.fecha ?? ''}</td>
+                  <td>${f.estado ?? ''}</td>
+                  <td>${(f.total ?? 0).toFixed ? f.total.toFixed(2) : f.total}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
+    });
+  } catch (e) {
+    console.error(e);
+    alert('No se pudo cargar el listado de facturas.');
   }
-  const isAdmin = getRole()==='ADMIN';
-  tb.innerHTML = items.map(f => `
-    <tr>
-      <td>${f.id}</td>
-      <td>${f.cliente}</td>
-      <td>${f.cuit || '-'}</td>
-      <td>${f.fecha}</td>
-      <td>${f.detalle}</td>
-      <td>${Number(f.importe).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-      <td>${f.estado}</td>
-      <td class="text-nowrap">
-        <button class="btn btn-outline-secondary btn-sm" data-action="ver-factura" data-id="${f.id}">Ver</button>
-        ${isAdmin ? `<button class="btn btn-outline-danger btn-sm" data-action="del-factura" data-id="${f.id}">Eliminar</button>` : ''}
-      </td>
-    </tr>`).join('');
 }
 
+
+/* ============= EMITIR FACTURA ============= */
 function wireFacturaButton() {
   const btn = document.getElementById('btnEmitirFactura');
-  if (!btn) return;
+  if (!btn) { console.warn('btnEmitirFactura no encontrado'); return; }
 
   btn.onclick = () => {
     openModal({
@@ -560,7 +557,7 @@ function wireFacturaButton() {
           </div>
           <div class="col-md-3">
             <label class="form-label">Fecha</label>
-            <input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control" required>
+            <input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control">
           </div>
           <div class="col-md-8">
             <label class="form-label">Detalle</label>
@@ -578,35 +575,99 @@ function wireFacturaButton() {
       `
     });
 
+    // El botón existe recién después de openModal()
     const saveBtn = document.getElementById('saveFactura');
+    if (!saveBtn) return;
+
     saveBtn.onclick = async () => {
       const form = document.getElementById('formFactura');
       const fd = Object.fromEntries(new FormData(form));
 
-      if (!fd.cliente || !fd.detalle || !fd.importe || !fd.fecha) {
-        alert('Completá los campos obligatorios.'); return;
+      if (!fd.cliente || !fd.detalle || !fd.importe) {
+        alert('Completá los campos obligatorios.');
+        return;
       }
 
+      const payload = {
+        cliente: fd.cliente,
+        cuit: fd.cuit || null,
+        fecha: fd.fecha,                 // yyyy-MM-dd
+        total: Number(fd.importe),
+        estado: "EMITIDA",
+        detalle: fd.detalle
+      };
+
       try {
-        // construir payload para backend
-        const payload = {
-          cliente: fd.cliente,
-          cuit: fd.cuit || null,
-          fecha: fd.fecha,
-          detalle: fd.detalle,
-          importe: Number(fd.importe),
-          estado: 'EMITIDA'
-        };
-        const creada = await apiCrearFactura(payload);
+        const res = await fetch(`${API_BASE}/api/facturas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();  // para poder loguear errores retornados en texto
+        if (!res.ok) {
+          console.error('POST /api/facturas', res.status, res.statusText, text);
+          alert('No se pudo emitir la factura. Revisá consola/Network.');
+          return;
+        }
+        const data = JSON.parse(text);
         ensureModal().hide();
-        alert(`Factura #${creada.id} emitida con éxito.`);
-        // opcional: redirigir a la vista "facturas"
-        location.hash = '#facturas';
+        alert(`Factura emitida Nº ${data.id} para ${data.cliente} por ARS ${data.total}.`);
       } catch (e) {
         console.error(e);
-        alert('No se pudo emitir la factura. Revisá consola.');
+        alert('No se pudo emitir la factura. Revisá consola/Network.');
       }
     };
+  };
+}
+
+/* ============= VER FACTURAS EMITIDAS ============= */
+function wireListarFacturasButton() {
+  const btn = document.getElementById('btnVerFacturas');
+  if (!btn) return;
+
+  btn.onclick = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/facturas`, { method: 'GET' });
+      const text = await res.text();
+      if (!res.ok) {
+        console.error('GET /api/facturas', res.status, res.statusText, text);
+        alert('No se pudieron obtener las facturas.');
+        return;
+      }
+      const list = JSON.parse(text);
+
+      openModal({
+        title: 'Facturas emitidas',
+        body: `
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>#</th><th>Cliente</th><th>CUIT</th><th>Fecha</th>
+                  <th>Detalle</th><th>Total</th><th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${list.map(f => `
+                  <tr>
+                    <td>${f.id}</td>
+                    <td>${f.cliente}</td>
+                    <td>${f.cuit || '-'}</td>
+                    <td>${f.fecha || '-'}</td>
+                    <td>${f.detalle || '-'}</td>
+                    <td>${f.total?.toFixed ? f.total.toFixed(2) : f.total}</td>
+                    <td>${f.estado || '-'}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      });
+    } catch (e) {
+      console.error(e);
+      alert('No se pudieron obtener las facturas.');
+    }
   };
 }
 
@@ -650,50 +711,12 @@ function openModalFactura() {
       ensureModal().hide();
       if (location.hash !== '#facturas') location.hash = '#facturas';
       renderTablaFacturas(await cargarFacturas());
-    } catch(e) {
+    } catch(error) {
       console.log('No se pudo emitir la factura');
     }
   });
 }
 
-function wireFacturaButtons() {
-  document.getElementById('btnEmitirFactura')?.addEventListener('click', ()=> openModalFactura());
-
-  const tb = document.getElementById('tablaFacturas');
-  if (!tb) return;
-  tb.onclick = async (ev)=>{
-    const btn = ev.target.closest('button[data-action]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-
-    if (btn.dataset.action === 'ver-factura') {
-      try {
-        const f = await fetchJSON(`${API_BASE}/facturas/${id}`);
-        openModal({
-          title:`Factura #${f.id}`,
-          body: `
-            <div class="row g-2">
-              <div class="col-md-6"><strong>Cliente:</strong> ${f.cliente}</div>
-              <div class="col-md-3"><strong>CUIT:</strong> ${f.cuit||'-'}</div>
-              <div class="col-md-3"><strong>Fecha:</strong> ${f.fecha}</div>
-              <div class="col-12"><strong>Detalle:</strong> ${f.detalle}</div>
-              <div class="col-md-4"><strong>Importe:</strong> $ ${Number(f.importe).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>
-              <div class="col-md-3"><strong>Estado:</strong> ${f.estado}</div>
-              <div class="col-md-5"><strong>Creada:</strong> ${f.creadoEn || '-'}</div>
-            </div>`
-        });
-      } catch(e) { alert('No se pudo obtener la factura'); }
-    }
-
-    if (btn.dataset.action === 'del-factura' && getRole()==='ADMIN') {
-      if (!confirm('¿Eliminar factura?')) return;
-      try {
-        await fetch(`${API_BASE}/facturas/${id}`, { method:'DELETE' });
-        renderTablaFacturas(await cargarFacturas());
-      } catch(e){ alert('No se pudo eliminar'); }
-    }
-  };
-}
 
 /* ===== Después de renderizar cada ruta ===== */
 function afterRender(route) {
@@ -710,11 +733,11 @@ function afterRender(route) {
     case 'admin':
       document.getElementById('btnIrFacturas')?.addEventListener('click', ()=>{ location.hash='#facturas'; });
       document.getElementById('btnEmitirFactura')?.addEventListener('click', ()=> openModalFactura());
+       wireFacturaButton();
       break;
     case 'facturas':
-      wireFacturaList();
-      wireFacturaButtons();
-      bindFacturasList();
+      wireListarFacturasButton()
+      wireFacturaButton();
       break;
     default:
       break;

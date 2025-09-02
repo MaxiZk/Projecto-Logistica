@@ -1,3 +1,4 @@
+// src/main/java/com/empresa/sigl/repository/FacturaRepository.java
 package com.empresa.sigl.repository;
 
 import com.empresa.sigl.model.Factura;
