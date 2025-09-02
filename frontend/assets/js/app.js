@@ -1,9 +1,28 @@
-/* ============================================
- *  SIGL – SPA Demo (Zuidwijk & Asoc. SRL)
- *  assets/js/app.js  (versión completa)
- * ============================================ */
+/*************************************************
+ *  SPA Frontend - Zuidwijk & Asoc. SRL
+ *  - Roles: ADMIN / CLIENTE
+ *  - Facturas: backend Spring (MySQL)
+ *  - Cargas / Aduana / Tickets: demo local
+ *************************************************/
 
-/* ======== Datos “demo” ======== */
+// 👉 AJUSTÁ esto si tu backend corre en otra URL/puerto
+const API_BASE = 'http://localhost:8080/api';
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${BASE_API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(()=> '');
+    throw new Error(`API ${res.status}: ${txt || res.statusText}`);
+  }
+  // si es 204 no hay body
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/* ===== Demo data (para módulos no conectados aún) ===== */
 const DB = {
   cargas: [
     { id:'ORD-101', cliente:'ACME S.A.', origen:'Buenos Aires', destino:'Rosario', estado:'Entregado',
@@ -21,54 +40,45 @@ const DB = {
   ],
   legajos:[
     { id:'LEG-0240', cliente:'Metalúrgica Norte', tipo:'Importación', estado:'Documentación OK' },
-    { id:'LEG-0241', cliente:'Agro Sur',           tipo:'Exportación',  estado:'Esperando verificación' }
+    { id:'LEG-0241', cliente:'Agro Sur', tipo:'Exportación', estado:'Esperando verificación' }
   ],
   tickets:[
     { id:'TCK-0502', cliente:'ACME S.A.', asunto:'Demora entrega', estado:'Abierto' },
-    { id:'TCK-0501', cliente:'Agro Sur',  asunto:'Cotización',     estado:'Cerrado' }
+    { id:'TCK-0501', cliente:'Agro Sur', asunto:'Cotización', estado:'Cerrado' }
   ]
 };
 
-/* Persistencia simple */
-function loadLS(){ const d = localStorage.getItem('sigl-demo'); if(d) { try { const o=JSON.parse(d); if(o?.cargas) DB.cargas=o.cargas; if(o?.legajos) DB.legajos=o.legajos; if(o?.tickets) DB.tickets=o.tickets; } catch{} } }
-function saveLS(){ localStorage.setItem('sigl-demo', JSON.stringify(DB)); }
-loadLS();
-
-/* ======== Auth demo ======== */
+/* ===== Auth demo ===== */
 const USERS = [
   { email:'admin@empresa.com',   password:'admin123',   role:'ADMIN' },
   { email:'cliente@empresa.com', password:'cliente123', role:'CLIENTE' }
 ];
-
 function isLoggedIn(){ return !!localStorage.getItem('sessionRole'); }
 function getRole(){ return localStorage.getItem('sessionRole') || 'GUEST'; }
-function isAdmin(){ return getRole() === 'ADMIN'; }
-
 function login(email, password){
-  const u = USERS.find(x =>
-    x.email.toLowerCase() === (email||'').trim().toLowerCase() &&
-    x.password === (password||'').trim()
-  );
+  const u = USERS.find(x => x.email.toLowerCase() === (email||'').trim().toLowerCase() &&
+                             x.password === (password||'').trim());
   if(!u) return {ok:false,msg:'Usuario o contraseña incorrectos'};
   localStorage.setItem('sessionRole',u.role);
   localStorage.setItem('sessionUser',u.email);
   updateAuthUI();
-  if(u.role==='ADMIN') { location.hash = '#cargas'; } else { location.hash = '#clientes'; }
+  location.hash = u.role==='ADMIN' ? '#cargas' : '#clientes';
+  render();
   return {ok:true};
 }
-
 function logout(){
   localStorage.removeItem('sessionRole');
   localStorage.removeItem('sessionUser');
   updateAuthUI();
-  location.hash = '#login';
+  location.hash = '#home';
+  render();
 }
 
-/* ======== Rutas y permisos ======== */
+/* ===== Rutas y permisos ===== */
 const PUBLIC_ROUTES = ['home','login'];
 const ROLE_ROUTES = {
-  ADMIN:   ['cargas','aduana','almacen','clientes','admin'],
-  CLIENTE: ['clientes','cargas','aduana','admin'],  // cliente puede ver cargas y tickets (solo lectura)
+  ADMIN:   ['cargas','aduana','almacen','clientes','admin','facturas'],
+  CLIENTE: ['clientes','cargas','aduana','facturas'],
   GUEST:   PUBLIC_ROUTES
 };
 function canAccess(route){
@@ -76,7 +86,7 @@ function canAccess(route){
   return (ROLE_ROUTES[r] || []).includes(route);
 }
 
-/* ======== Vistas ======== */
+/* ===== Vistas ===== */
 const Views = {
   home: () => `
   <div class="card p-4">
@@ -91,33 +101,6 @@ const Views = {
     <p><strong>¿Por qué elegirnos?</strong> Vemos su negocio como propio y lo analizamos desde todas las perspectivas para encontrar juntos la forma de hacerlo más productivo.</p>
   </div>`,
 
-  login: () => `
-  <div class="row justify-content-center">
-    <div class="col-md-5">
-      <div class="card p-4">
-        <h5 class="mb-3">Iniciar sesión</h5>
-        <form id="formLogin" class="row g-3">
-          <div class="col-12">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" placeholder="admin@empresa.com" required>
-          </div>
-          <div class="col-12">
-            <label class="form-label">Contraseña</label>
-            <input type="password" name="password" class="form-control" placeholder="admin123" required>
-          </div>
-          <div class="col-12">
-            <button class="btn btn-primary w-100" type="submit">Ingresar</button>
-          </div>
-          <div class="col-12 text-danger small" id="loginError"></div>
-        </form>
-        <div class="mt-3 small text-muted">
-          <div>Admin: admin@empresa.com / admin123</div>
-          <div>Cliente: cliente@empresa.com / cliente123</div>
-        </div>
-      </div>
-    </div>
-  </div>`,
-
   cargas: () => `
   <div class="card p-3">
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -125,7 +108,7 @@ const Views = {
         <h5 class="m-0">Gestión de Cargas</h5>
         <small class="text-muted">Registrar, ver y seguir órdenes de transporte.</small>
       </div>
-      ${isAdmin() ? `<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>` : ``}
+      ${getRole()==='ADMIN' ? '<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>' : ''}
     </div>
     <div class="table-responsive">
       <table class="table align-middle">
@@ -154,36 +137,19 @@ const Views = {
   almacen: () => `
   <div class="card p-4">
     <h5>Almacenamiento</h5>
-    <p class="text-muted">Módulo demostrativo.</p>
+    <p class="text-muted m-0">Módulo demostrativo.</p>
   </div>`,
 
   clientes: () => `
   <div class="card p-3">
     <h5 class="mb-3">Atención al Cliente</h5>
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead><tr>
-          <th>#</th><th>Cliente</th><th>Asunto</th><th>Estado</th><th>Acciones</th>
-        </tr></thead>
-        <tbody id="tablaTickets">
-          ${DB.tickets.map(t => `
-            <tr>
-              <td>${t.id}</td>
-              <td>${t.cliente}</td>
-              <td>${t.asunto}</td>
-              <td>${chipEstado(t.estado)}</td>
-              <td class="text-nowrap">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-ticket" data-id="${t.id}">Ver</button>
-                ${isAdmin() ? `
-                  <button type="button" class="btn btn-outline-primary btn-sm" data-action="edit-ticket" data-id="${t.id}">Editar</button>
-                  <button type="button" class="btn btn-outline-danger btn-sm"  data-action="del-ticket"  data-id="${t.id}">Eliminar</button>
-                ` : ``}
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
+    <ul class="list-group">
+      ${DB.tickets.map(t => `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><strong>${t.id}</strong> • ${t.cliente} • ${t.asunto} • ${t.estado}</div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-ticket" data-id="${t.id}">Ver</button>
+        </li>`).join('')}
+    </ul>
   </div>`,
 
   admin: () => `
@@ -193,7 +159,8 @@ const Views = {
       <div class="col-md-6">
         <div class="card p-3">
           <h6>Facturación</h6>
-          <button class="btn btn-primary btn-sm" id="btnEmitirFactura">Emitir factura</button>
+          <button class="btn btn-primary btn-sm" id="btnIrFacturas">Ir a Facturas</button>
+          <button class="btn btn-outline-primary btn-sm ms-2" id="btnEmitirFactura">Emitir factura</button>
         </div>
       </div>
       <div class="col-md-6">
@@ -205,138 +172,126 @@ const Views = {
     </div>
   </div>`,
 
+  facturas: () => `
+  <div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <h5 class="m-0">Facturas emitidas</h5>
+        <small class="text-muted">Listado de facturas guardadas en el sistema.</small>
+      </div>
+      ${getRole()==='ADMIN' ? '<button class="btn btn-primary btn-sm" id="btnEmitirFactura">+ Emitir factura</button>' : ''}
+    </div>
+
+    <div class="row g-2 mb-2">
+      <div class="col-md-4">
+        <input id="filterCliente" class="form-control" placeholder="Filtrar por cliente…">
+      </div>
+      <div class="col-md-2">
+        <button id="btnBuscarFactura" class="btn btn-outline-secondary w-100">Buscar</button>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>#</th><th>Cliente</th><th>CUIT</th><th>Fecha</th>
+            <th>Detalle</th><th>Importe (ARS)</th><th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaFacturas"></tbody>
+      </table>
+    </div>
+  </div>`,
+
   notfound: () => `<div class="card p-4">Ruta no encontrada.</div>`
 };
 
-/* ======== Router SPA ======== */
+/* ===== Router ===== */
 function setActive(route){
   document.querySelectorAll('#menu a[data-route]').forEach(a=>{
     a.classList.toggle('active', a.dataset.route===route);
   });
   const mapTitle = {
-    home:'Inicio', login:'Login', cargas:'Gestión de Cargas', aduana:'Gestión Aduanera',
-    almacen:'Almacenamiento', clientes:'Atención al Cliente', admin:'Administración'
+    home:'Inicio', cargas:'Gestión de Cargas', aduana:'Gestión Aduanera',
+    almacen:'Almacenamiento', clientes:'Atención al Cliente',
+    admin:'Administración', facturas:'Facturas'
   };
-  const t = document.getElementById('page-title');
-  const s = document.getElementById('page-subtitle');
-  if(t) t.textContent = mapTitle[route] || route;
-  if(s) s.textContent = (route==='home'?'Resumen':'');
+  document.getElementById('page-title').textContent = mapTitle[route] || route;
+  document.getElementById('page-subtitle').textContent =
+    route==='home' ? 'Acerca de nosotros' : '';
 }
 
 function render(route){
   const target = (route || (location.hash||'#home').slice(1));
   const isAuth = isLoggedIn();
 
-  // Si está logueado, ocultamos home/login
+  // si está logueado, ocultar home/login
   let r = target;
   if(isAuth && (r==='home' || r==='login')){
     r = getRole()==='ADMIN' ? 'cargas' : 'clientes';
     location.hash = '#'+r;
   }
-  // Si no tiene permiso, lo mandamos a login o home
+  // permisos
   if(!isAuth && !PUBLIC_ROUTES.includes(r)){ r='login'; location.hash='#login'; }
   if(isAuth && !canAccess(r)){ r = getRole()==='ADMIN' ? 'cargas' : 'clientes'; location.hash='#'+r; }
 
   const html = (Views[r]||Views.notfound)();
-  const container = document.getElementById('view');
-  if(container) container.innerHTML = html;
+  document.getElementById('view').innerHTML = html;
   setActive(r);
   afterRender(r);
 }
 
-function guardRoute(route){
-  // Solo invitados no pueden entrar a rutas privadas
-  if (getRole()==='GUEST' && !PUBLIC_ROUTES.includes(route)) {
-    location.hash = '#login';
-    return false;
-  }
-  // CLIENTE y ADMIN pueden entrar siempre a lo que permita ROLE_ROUTES
-  return true;
-}
-
-function handleRoute(){
-  const route = (location.hash || '#home').slice(1);
-  if(!guardRoute(route)) return;
-  render(route);
-}
-
-window.addEventListener('hashchange', handleRoute);
+window.addEventListener('hashchange', ()=> render());
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Delegación de clicks en el menú
-  const menu = document.getElementById('menu');
-  if(menu){
-    menu.addEventListener('click', (e)=>{
-      const a = e.target.closest('a[data-route]');
-      if(!a) return;
-      // SPA: solo ajustar hash
-      const href = a.getAttribute('href') || ('#' + a.dataset.route);
-      if(href) {
-        e.preventDefault();
-        location.hash = href;
-      }
-    });
-  }
+  document.querySelectorAll('#menu a[data-route]').forEach(a=>{
+    a.addEventListener('click', (ev)=>{/* solo hashchange */});
+  });
   document.getElementById('logout')?.addEventListener('click', (e)=>{ e.preventDefault(); logout(); });
   updateAuthUI();
-  handleRoute();
+  render();
 });
 
-/* ======== UI Auth ======== */
+/* ===== UI de Auth ===== */
 function updateAuthUI(){
   const isAuth = isLoggedIn();
-  // Visibilidad de ítems de menú por permisos
   document.querySelectorAll('#menu a[data-route]').forEach(a=>{
     const route = a.dataset.route;
     let visible = (isAuth && canAccess(route)) || (!isAuth && PUBLIC_ROUTES.includes(route));
-    if (isAuth && route==='home')  visible = false; // ocultar Inicio estando logueado
-    if (isAuth && route==='login') visible = false; // ocultar Login estando logueado
+    if (isAuth && (route==='home' || route==='login')) visible = false;
     const li = a.closest('li'); if (li) li.style.display = visible ? '' : 'none';
   });
-
-  // Encabezado usuario
-  const nameEl = document.getElementById('user-name');
-  const mailEl = document.getElementById('user-email') || document.querySelector('#page-subtitle + small, .header-right small'); // fallback
-  if(nameEl){
-    if(isAuth) { nameEl.textContent = isAdmin()?'Admin':'Cliente'; }
-    else       { nameEl.textContent = 'Invitado'; }
-  }
-  if(mailEl){
-    if(isAuth) { mailEl.textContent = localStorage.getItem('sessionUser') || '-'; }
-    else       { mailEl.textContent = '-'; }
-  }
 
   const loginLink = document.getElementById('loginLink');
   const logoutBtn = document.getElementById('logout');
   if (loginLink) loginLink.style.display = isAuth ? 'none' : '';
   if (logoutBtn)  logoutBtn.style.display  = isAuth ? '' : 'none';
+
+  const nameEl = document.getElementById('user-name');
+  const mailEl = document.getElementById('user-email');
+  if(nameEl && mailEl){
+    if(isAuth){
+      nameEl.textContent = getRole()==='ADMIN' ? 'Admin' : 'Cliente';
+      mailEl.textContent = localStorage.getItem('sessionUser') || '-';
+    } else { nameEl.textContent='Invitado'; mailEl.textContent='-'; }
+  }
 }
 
-/* ======== Helpers de estado / UI ======== */
+/* ===== Helpers ===== */
 function chipEstado(e){
-  const map = {
-    'Entregado':'estado entregado',
-    'En tránsito':'estado transito',
-    'En preparación':'estado transito',
-    'Demorado':'estado demorado',
-    'Abierto':'estado demorado',
-    'Cerrado':'estado entregado'
-  };
+  const map = {'Entregado':'estado entregado','En tránsito':'estado transito',
+    'En preparación':'estado transito','Demorado':'estado demorado'};
   return `<span class="${map[e]||'estado'}">${e}</span>`;
 }
-
-/* ======== Modal seguro (instancia única) ======== */
-let APP_MODAL = null;
-let APP_MODAL_EL = null;
-
+let APP_MODAL = null, APP_MODAL_EL = null;
 function ensureModal() {
   if (!APP_MODAL_EL) APP_MODAL_EL = document.getElementById('appModal');
   if (!APP_MODAL) APP_MODAL = bootstrap.Modal.getOrCreateInstance(APP_MODAL_EL, {
-    backdrop: true,
-    keyboard: true
+    backdrop:true, keyboard:true
   });
   return APP_MODAL;
 }
-
 function openModal({ title = '', body = '', footer = '' }) {
   ensureModal();
   document.getElementById('appModalLabel').textContent = title || 'Detalle';
@@ -345,24 +300,28 @@ function openModal({ title = '', body = '', footer = '' }) {
     <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>`;
   APP_MODAL.show();
 }
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
 
-/* ======== Cargas (CRUD con permisos) ======== */
+/* ===== Cargas (CRUD demo) ===== */
 function bindCargasEvents(){
-  // “Nueva” solo si existe el botón (admin)
   document.getElementById('btnNuevaCarga')?.addEventListener('click', ()=> showCargaForm());
-
-  // Acciones en tabla
+  // Ver siempre
   document.querySelectorAll('[data-action="ver-carga"]').forEach(b=> b.onclick = ()=> showCargaView(b.dataset.id));
-  if(isAdmin()){
+
+  // Editar/Eliminar solo ADMIN
+  if (getRole()==='ADMIN'){
     document.querySelectorAll('[data-action="edit-carga"]').forEach(b=> b.onclick = ()=> showCargaForm(b.dataset.id));
     document.querySelectorAll('[data-action="del-carga"]').forEach(b=> b.onclick = ()=> deleteCarga(b.dataset.id));
   }
 }
-
 function renderCargasTable(){
-    const tbody = document.getElementById('tablaCargas'); if(!tbody) return;
-    const role = getRole();
-    tbody.innerHTML = DB.cargas.map(c=>`
+  const tbody = document.getElementById('tablaCargas'); if(!tbody) return;
+  const isAdmin = getRole()==='ADMIN';
+  tbody.innerHTML = DB.cargas.map(c=>`
     <tr>
       <td>${c.id}</td>
       <td>${c.cliente}</td>
@@ -375,16 +334,14 @@ function renderCargasTable(){
       <td>${chipEstado(c.estado)}</td>
       <td class="text-nowrap">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-carga" data-id="${c.id}">Ver</button>
-        ${role==='ADMIN' ? `
+        ${isAdmin ? `
           <button type="button" class="btn btn-outline-primary btn-sm" data-action="edit-carga" data-id="${c.id}">Editar</button>
           <button type="button" class="btn btn-outline-danger btn-sm" data-action="del-carga" data-id="${c.id}">Eliminar</button>
-        ` : ``}
+        `:''}
       </td>
     </tr>`).join('');
-    bindCargasEvents();
+  bindCargasEvents();
 }
-
-
 function showCargaView(id){
   const c = DB.cargas.find(x=>x.id===id); if(!c) return;
   openModal({
@@ -412,17 +369,11 @@ function showCargaView(id){
         <div class="col-md-3"><strong>Semi:</strong> ${c.semi?.marca||'-'} ${c.semi?.modelo||''} (${c.semi?.patente||'-'})</div>
       </div>`,
     footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            ${isAdmin()? `<button class="btn btn-primary" id="goEditCarga">Editar</button>`:``}`
+            ${getRole()==='ADMIN'?'<button class="btn btn-primary" id="goEditCarga">Editar</button>':''}`
   });
-  document.getElementById('goEditCarga')?.addEventListener('click', ()=>{
-    if(!isAdmin()){ alert('Solo ADMIN puede editar cargas.'); return; }
-    ensureModal().hide(); showCargaForm(id);
-  });
+  document.getElementById('goEditCarga')?.addEventListener('click', ()=>{ ensureModal().hide(); showCargaForm(id); });
 }
-
 function showCargaForm(id){
-  if(!isAdmin()){ alert('Solo ADMIN puede crear/editar cargas.'); return; }
-
   const isEdit = !!id;
   const c = isEdit ? DB.cargas.find(x=>x.id===id) : {
     id:'', cliente:'', origen:'', destino:'', estado:'En preparación',
@@ -431,26 +382,25 @@ function showCargaForm(id){
     tractor:{marca:'',modelo:'',anio:'',patente:'',sat:''},
     semi:{marca:'',modelo:'',anio:'',patente:''}
   };
-
   openModal({
     title: isEdit ? `Editar carga ${c.id}`:'Nueva Carga',
     body: `
       <form id="formCarga" class="row g-3">
         <div class="col-md-3"><label class="form-label">ID Orden</label>
-          <input class="form-control" name="id" value="${c.id||''}" ${isEdit?'readonly':''} required></div>
+          <input class="form-control" name="id" value="${c.id}" ${isEdit?'readonly':''} required></div>
         <div class="col-md-5"><label class="form-label">Cliente</label>
-          <input class="form-control" name="cliente" value="${c.cliente||''}" required></div>
+          <input class="form-control" name="cliente" value="${c.cliente}" required></div>
         <div class="col-md-2"><label class="form-label">Fecha</label>
           <input type="date" class="form-control" name="fecha" value="${c.fecha||''}"></div>
         <div class="col-md-2"><label class="form-label">Estado</label>
           <select class="form-select" name="estado">
-            ${['En preparación','En tránsito','Entregado','Demorado'].map(e=>`<option ${e===(c.estado||'En preparación')?'selected':''}>${e}</option>`).join('')}
+            ${['En preparación','En tránsito','Entregado','Demorado'].map(e=>`<option ${e===c.estado?'selected':''}>${e}</option>`).join('')}
           </select></div>
 
         <div class="col-md-3"><label class="form-label">Origen</label>
-          <input class="form-control" name="origen" value="${c.origen||''}" required></div>
+          <input class="form-control" name="origen" value="${c.origen}" required></div>
         <div class="col-md-3"><label class="form-label">Destino</label>
-          <input class="form-control" name="destino" value="${c.destino||''}" required></div>
+          <input class="form-control" name="destino" value="${c.destino}" required></div>
         <div class="col-md-3"><label class="form-label">Terminal portuaria</label>
           <input class="form-control" name="terminal" value="${c.terminal||''}"></div>
         <div class="col-md-3"><label class="form-label">Contenedor</label>
@@ -518,30 +468,26 @@ function showCargaForm(id){
     if(!pack.id){ alert('ID obligatorio'); return; }
     if(isEdit){
       const i = DB.cargas.findIndex(x=>x.id===id);
-      if(i>=0) DB.cargas[i] = {...DB.cargas[i], ...pack};
+      DB.cargas[i] = {...DB.cargas[i], ...pack};
     } else {
       if(DB.cargas.some(x=>x.id===pack.id)){ alert('El ID ya existe'); return; }
       DB.cargas.unshift(pack);
     }
-    saveLS();
     ensureModal().hide();
-    render('cargas'); // re-pinta la tabla y rebindea
+    render('cargas');
   });
 }
-
 function deleteCarga(id){
-  if(!isAdmin()){ alert('Solo ADMIN puede eliminar cargas.'); return; }
   if(!confirm(`¿Eliminar la orden ${id}?`)) return;
   DB.cargas = DB.cargas.filter(x=>x.id!==id);
-  saveLS(); renderCargasTable();
+  renderCargasTable();
 }
 
-/* ======== Aduana ======== */
+/* ===== Aduana / Tickets ===== */
 function bindAduanaEvents(){
   document.querySelectorAll('[data-action="ver-legajo"]').forEach(b=>{
     b.onclick = ()=>{
       const lg = DB.legajos.find(x=>x.id===b.dataset.id);
-      if(!lg) return;
       openModal({
         title:`Legajo ${lg.id}`,
         body:`<p><strong>Cliente:</strong> ${lg.cliente}</p>
@@ -551,119 +497,209 @@ function bindAduanaEvents(){
     };
   });
 }
-
-/* ======== Tickets (Clientes) – lectura para cliente, CRUD para admin ======== */
 function bindTicketsEvents(){
   document.querySelectorAll('[data-action="ver-ticket"]').forEach(b=>{
-    b.onclick = ()=> showTicketView(b.dataset.id);
+    b.onclick = ()=>{
+      const t = DB.tickets.find(x=>x.id===b.dataset.id);
+      openModal({
+        title:`Ticket ${t.id}`,
+        body:`<p><strong>Cliente:</strong> ${t.cliente}</p>
+              <p><strong>Asunto:</strong> ${t.asunto}</p>
+              <p><strong>Estado:</strong> ${t.estado}</p>`
+      });
+    };
   });
-  if(isAdmin()){
-    document.querySelectorAll('[data-action="edit-ticket"]').forEach(b=>{
-      b.onclick = ()=> showTicketForm(b.dataset.id);
-    });
-    document.querySelectorAll('[data-action="del-ticket"]').forEach(b=>{
-      b.onclick = ()=> deleteTicket(b.dataset.id);
-    });
+}
+
+/* ===== Facturas (con backend) ===== */
+async function cargarFacturas() {
+  const q = document.getElementById('filterCliente')?.value?.trim() || '';
+  const url = q ? `${API_BASE}/facturas?cliente=${encodeURIComponent(q)}` : `${API_BASE}/facturas`;
+  return fetchJSON(url);
+}
+function renderTablaFacturas(items) {
+  const tb = document.getElementById('tablaFacturas');
+  if (!tb) return;
+  if (!items || items.length === 0) {
+    tb.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Sin registros</td></tr>`;
+    return;
   }
+  const isAdmin = getRole()==='ADMIN';
+  tb.innerHTML = items.map(f => `
+    <tr>
+      <td>${f.id}</td>
+      <td>${f.cliente}</td>
+      <td>${f.cuit || '-'}</td>
+      <td>${f.fecha}</td>
+      <td>${f.detalle}</td>
+      <td>${Number(f.importe).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+      <td>${f.estado}</td>
+      <td class="text-nowrap">
+        <button class="btn btn-outline-secondary btn-sm" data-action="ver-factura" data-id="${f.id}">Ver</button>
+        ${isAdmin ? `<button class="btn btn-outline-danger btn-sm" data-action="del-factura" data-id="${f.id}">Eliminar</button>` : ''}
+      </td>
+    </tr>`).join('');
 }
 
-function showTicketView(id){
-  const t = DB.tickets.find(x=>x.id===id); if(!t) return;
-  openModal({
-    title:`Ticket ${t.id}`,
-    body:`<p><strong>Cliente:</strong> ${t.cliente}</p>
-          <p><strong>Asunto:</strong> ${t.asunto}</p>
-          <p><strong>Estado:</strong> ${t.estado}</p>`,
-    footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            ${isAdmin()? `<button class="btn btn-primary" id="goEditTicket">Editar</button>`:''}`
-  });
-  document.getElementById('goEditTicket')?.addEventListener('click', ()=>{
-    if(!isAdmin()){ alert('Solo ADMIN puede editar tickets.'); return; }
-    ensureModal().hide(); showTicketForm(id);
-  });
-}
+function wireFacturaButton() {
+  const btn = document.getElementById('btnEmitirFactura');
+  if (!btn) return;
 
-function showTicketForm(id){
-  if(!isAdmin()){ alert('Solo ADMIN puede editar tickets.'); return; }
-  const isEdit = !!id;
-  const t = isEdit ? DB.tickets.find(x=>x.id===id) : { id:'', cliente:'', asunto:'', estado:'Abierto' };
-  openModal({
-    title: isEdit ? `Editar ticket ${t.id}` : 'Nuevo ticket',
-    body:`<form id="formTicket" class="row g-3">
-      <div class="col-md-4"><label class="form-label">ID</label><input class="form-control" name="id" value="${t.id||''}" ${isEdit?'readonly':''} required></div>
-      <div class="col-md-8"><label class="form-label">Cliente</label><input class="form-control" name="cliente" value="${t.cliente||''}" required></div>
-      <div class="col-12"><label class="form-label">Asunto</label><input class="form-control" name="asunto" value="${t.asunto||''}" required></div>
-      <div class="col-md-6"><label class="form-label">Estado</label>
-        <select class="form-select" name="estado">
-          ${['Abierto','En gestión','Cerrado'].map(e=>`<option ${e===(t.estado||'Abierto')?'selected':''}>${e}</option>`).join('')}
-        </select>
-      </div>
-    </form>`,
-    footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button class="btn btn-primary" id="saveTicket">Guardar</button>`
-  });
-  document.getElementById('saveTicket').onclick = ()=>{
-    const data = Object.fromEntries(new FormData(document.getElementById('formTicket')));
-    if(!data.id || !data.cliente || !data.asunto){ alert('Completá ID, Cliente y Asunto'); return; }
-    if(isEdit){
-      const i = DB.tickets.findIndex(x=>x.id===id); if(i>=0) DB.tickets[i] = {...DB.tickets[i], ...data};
-    }else{
-      if(DB.tickets.some(x=>x.id===data.id)){ alert('El ID ya existe'); return; }
-      DB.tickets.unshift(data);
-    }
-    saveLS(); ensureModal().hide();
-    // refresco rápido la vista de clientes:
-    const v = document.getElementById('view');
-    if(v){ v.innerHTML = Views.clientes(); bindTicketsEvents(); }
+  btn.onclick = () => {
+    openModal({
+      title: 'Emitir Factura',
+      body: `
+        <form id="formFactura" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Cliente</label>
+            <input name="cliente" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">CUIT</label>
+            <input name="cuit" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Fecha</label>
+            <input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control" required>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Detalle</label>
+            <input name="detalle" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Importe (ARS)</label>
+            <input type="number" step="0.01" name="importe" class="form-control" required>
+          </div>
+        </form>
+      `,
+      footer: `
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" id="saveFactura">Emitir</button>
+      `
+    });
+
+    const saveBtn = document.getElementById('saveFactura');
+    saveBtn.onclick = async () => {
+      const form = document.getElementById('formFactura');
+      const fd = Object.fromEntries(new FormData(form));
+
+      if (!fd.cliente || !fd.detalle || !fd.importe || !fd.fecha) {
+        alert('Completá los campos obligatorios.'); return;
+      }
+
+      try {
+        // construir payload para backend
+        const payload = {
+          cliente: fd.cliente,
+          cuit: fd.cuit || null,
+          fecha: fd.fecha,
+          detalle: fd.detalle,
+          importe: Number(fd.importe),
+          estado: 'EMITIDA'
+        };
+        const creada = await apiCrearFactura(payload);
+        ensureModal().hide();
+        alert(`Factura #${creada.id} emitida con éxito.`);
+        // opcional: redirigir a la vista "facturas"
+        location.hash = '#facturas';
+      } catch (e) {
+        console.error(e);
+        alert('No se pudo emitir la factura. Revisá consola.');
+      }
+    };
   };
 }
 
-function deleteTicket(id){
-  if(!isAdmin()){ alert('Solo ADMIN puede eliminar tickets.'); return; }
-  if(!confirm(`¿Eliminar el ticket ${id}?`)) return;
-  DB.tickets = DB.tickets.filter(x=>x.id!==id);
-  saveLS();
-  const v = document.getElementById('view');
-  if(v){ v.innerHTML = Views.clientes(); bindTicketsEvents(); }
+
+function openModalFactura() {
+  openModal({
+    title: 'Emitir Factura',
+    body: `
+      <form id="formFactura" class="row g-3">
+        <div class="col-md-6"><label class="form-label">Cliente</label>
+          <input name="cliente" class="form-control" required></div>
+        <div class="col-md-3"><label class="form-label">CUIT</label>
+          <input name="cuit" class="form-control"></div>
+        <div class="col-md-3"><label class="form-label">Fecha</label>
+          <input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control" required></div>
+        <div class="col-md-8"><label class="form-label">Detalle</label>
+          <input name="detalle" class="form-control" required></div>
+        <div class="col-md-4"><label class="form-label">Importe (ARS)</label>
+          <input type="number" step="0.01" name="importe" class="form-control" required></div>
+      </form>`,
+    footer: `
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button class="btn btn-primary" id="saveFactura">Emitir</button>`
+  });
+
+  document.getElementById('saveFactura')?.addEventListener('click', async ()=>{
+    const fd = Object.fromEntries(new FormData(document.getElementById('formFactura')));
+    if(!fd.cliente || !fd.detalle || !fd.importe || !fd.fecha){ alert('Completá los obligatorios'); return; }
+    try {
+      await fetchJSON(`${API_BASE}/facturas`, {
+        method: 'POST',
+        body: JSON.stringify({
+          cliente: fd.cliente,
+          cuit: fd.cuit || null,
+          fecha: fd.fecha,
+          detalle: fd.detalle,
+          importe: Number(fd.importe),
+          estado: 'EMITIDA'
+        })
+      });
+      ensureModal().hide();
+      if (location.hash !== '#facturas') location.hash = '#facturas';
+      renderTablaFacturas(await cargarFacturas());
+    } catch(e) {
+      console.log('No se pudo emitir la factura');
+    }
+  });
 }
 
-/* ======== Admin ======== */
-function bindAdminEvents(){
-  const btn = document.getElementById('btnEmitirFactura');
-  if (btn){
-    btn.onclick = ()=>{
-      openModal({
-        title:'Emisión de Factura',
-        body:`<form id="formFactura" class="row g-3">
-          <div class="col-md-6"><label class="form-label">Cliente</label><input name="cliente" class="form-control" required></div>
-          <div class="col-md-3"><label class="form-label">CUIT</label><input name="cuit" class="form-control"></div>
-          <div class="col-md-3"><label class="form-label">Fecha</label><input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control"></div>
-          <div class="col-md-8"><label class="form-label">Detalle</label><input name="detalle" class="form-control" required></div>
-          <div class="col-md-4"><label class="form-label">Importe (ARS)</label><input type="number" step="0.01" name="importe" class="form-control" required></div>
-        </form>`,
-        footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button class="btn btn-primary" id="saveFactura">Emitir</button>`
-      });
-      document.getElementById('saveFactura')?.addEventListener('click', ()=>{
-        const fd = Object.fromEntries(new FormData(document.getElementById('formFactura')));
-        if(!fd.cliente || !fd.detalle || !fd.importe){ alert('Completá los obligatorios'); return; }
-        ensureModal().hide();
-        alert(`Factura emitida para ${fd.cliente} por ARS ${Number(fd.importe).toFixed(2)} (demo).`);
-      });
-    };
-  }
+function wireFacturaButtons() {
+  document.getElementById('btnEmitirFactura')?.addEventListener('click', ()=> openModalFactura());
+
+  const tb = document.getElementById('tablaFacturas');
+  if (!tb) return;
+  tb.onclick = async (ev)=>{
+    const btn = ev.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+
+    if (btn.dataset.action === 'ver-factura') {
+      try {
+        const f = await fetchJSON(`${API_BASE}/facturas/${id}`);
+        openModal({
+          title:`Factura #${f.id}`,
+          body: `
+            <div class="row g-2">
+              <div class="col-md-6"><strong>Cliente:</strong> ${f.cliente}</div>
+              <div class="col-md-3"><strong>CUIT:</strong> ${f.cuit||'-'}</div>
+              <div class="col-md-3"><strong>Fecha:</strong> ${f.fecha}</div>
+              <div class="col-12"><strong>Detalle:</strong> ${f.detalle}</div>
+              <div class="col-md-4"><strong>Importe:</strong> $ ${Number(f.importe).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>
+              <div class="col-md-3"><strong>Estado:</strong> ${f.estado}</div>
+              <div class="col-md-5"><strong>Creada:</strong> ${f.creadoEn || '-'}</div>
+            </div>`
+        });
+      } catch(e) { alert('No se pudo obtener la factura'); }
+    }
+
+    if (btn.dataset.action === 'del-factura' && getRole()==='ADMIN') {
+      if (!confirm('¿Eliminar factura?')) return;
+      try {
+        await fetch(`${API_BASE}/facturas/${id}`, { method:'DELETE' });
+        renderTablaFacturas(await cargarFacturas());
+      } catch(e){ alert('No se pudo eliminar'); }
+    }
+  };
 }
 
-
-
-/* ======== Hook post-render ======== */
+/* ===== Después de renderizar cada ruta ===== */
 function afterRender(route) {
   switch (route) {
-    case 'login':
-      bindLoginForm();
-      break;
     case 'cargas':
-      renderCargasTable();     // dentro llama a bindCargasEvents()
+      renderCargasTable();
       break;
     case 'aduana':
       bindAduanaEvents();
@@ -672,25 +708,15 @@ function afterRender(route) {
       bindTicketsEvents();
       break;
     case 'admin':
-      //if(!isAdmin()) return;
-      bindAdminEvents();
-      wireFacturaButton();
+      document.getElementById('btnIrFacturas')?.addEventListener('click', ()=>{ location.hash='#facturas'; });
+      document.getElementById('btnEmitirFactura')?.addEventListener('click', ()=> openModalFactura());
+      break;
+    case 'facturas':
+      wireFacturaList();
+      wireFacturaButtons();
+      bindFacturasList();
       break;
     default:
-      // home / inicio / etc.
       break;
   }
-}
-
-/* ======== Login form binding ======== */
-function bindLoginForm(){
-  const f = document.getElementById('formLogin'); if(!f) return;
-  f.addEventListener('submit',(e)=>{
-    e.preventDefault();
-    const email = f.querySelector('[name="email"]').value;
-    const pass  = f.querySelector('[name="password"]').value;
-    const res = login(email,pass);
-    const err = document.getElementById('loginError');
-    if(err) err.textContent = res.ok ? '' : res.msg;
-  });
 }
