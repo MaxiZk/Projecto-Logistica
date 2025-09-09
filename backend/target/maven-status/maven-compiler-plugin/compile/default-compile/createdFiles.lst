@@ -1,0 +1,7 @@
+com\empresa\sigl\repository\FacturaRepository.class
+com\empresa\sigl\SiglApplication.class
+com\empresa\sigl\config\WebCorsConfig$1.class
+com\empresa\sigl\config\WebCorsConfig.class
+com\empresa\sigl\controller\FacturaController.class
+com\empresa\sigl\model\Factura.class
+com\empresa\sigl\service\FacturaService.class

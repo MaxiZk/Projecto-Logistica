@@ -1,7 +1,8 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "sqltools.connections": [],
     "dataworkspace.excludedProjects": [
         "logistica/logistica.sqlproj"
-    ]
+    ],
+    "java.compile.nullAnalysis.mode": "automatic"
 }
