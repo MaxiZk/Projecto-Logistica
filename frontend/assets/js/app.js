@@ -1,8 +1,7 @@
 /*************************************************
  *  SPA Frontend - Zuidwijk & Asoc. SRL
  *  - Roles: ADMIN / CLIENTE
- *  - Facturas: backend Spring (MariaDB/MySQL)
- *  - Cargas / Aduana / Tickets: demo local
+ *  - Backend Spring (MariaDB/MySQL)
  *************************************************/
 
 /* ==================== CONFIG ==================== */
@@ -11,55 +10,37 @@ const API_BASE = 'http://localhost:8080';
 
 /* ============== HELPERS API (GENÉRICOS) ============== */
 async function apiFetch(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-    });
+    const init = { ...options };
+    if (init.body) init.headers = { ...(init.headers || {}), 'Content-Type': 'application/json' };
+    const res = await fetch(`${API_BASE}${path}`, init);
     const txt = await res.text().catch(() => '');
     if (!res.ok) throw new Error(`API ${res.status}: ${txt || res.statusText}`);
     return txt ? JSON.parse(txt) : null; // soporta 204
 }
+const apiGet    = (p) => apiFetch(p, { method: 'GET' });
+const apiPost   = (p, body) => apiFetch(p, { method: 'POST', body: JSON.stringify(body) });
+const apiPut    = (p, body) => apiFetch(p, { method: 'PUT',  body: JSON.stringify(body) });
+const apiDelete = (p) => apiFetch(p, { method: 'DELETE' });
 
-/* ============== BACKEND FACTURAS ============== */
+/* ============== FACTURAS (API) ============== */
 async function apiListarFacturas(cliente) {
     const path = cliente && cliente.trim()
         ? `/api/facturas?cliente=${encodeURIComponent(cliente.trim())}`
         : `/api/facturas`;
-    return apiFetch(path, { method: 'GET' });
+    return apiGet(path);
 }
+async function apiCrearFactura(factura) { return apiPost('/api/facturas', factura); }
 
-async function apiCrearFactura(factura) {
-    return apiFetch('/api/facturas', {
-        method: 'POST',
-        body: JSON.stringify(factura),
-    });
-}
+/* ============== CARGAS (API) ============== */
+const apiListarCargas      = () => apiGet('/api/cargas');
+const apiObtenerCarga      = (id) => apiGet(`/api/cargas/${encodeURIComponent(id)}`);
+const apiCrearCarga        = (payload) => apiPost('/api/cargas', payload);
+const apiActualizarCarga   = (id, payload) => apiPut(`/api/cargas/${encodeURIComponent(id)}`, payload);
+const apiEliminarCarga     = (id) => apiDelete(`/api/cargas/${encodeURIComponent(id)}`);
 
-/* ===== Demo data (para módulos no conectados aún) ===== */
-const DB = {
-    cargas: [
-        { id:'ORD-101', cliente:'ACME S.A.', origen:'Buenos Aires', destino:'Rosario', estado:'Entregado',
-            terminal:'-', contenedor:'-', tipo:'-', taraKg:'', precinto:'', pesoBrutoKg:'', fecha:'2025-08-10',
-            chofer:{nombre:'',dni:'',cel:'',usuario:'',password:''},
-            tractor:{marca:'',modelo:'',anio:'',patente:'',sat:'-'},
-            semi:{marca:'',modelo:'',anio:'',patente:''}
-        },
-        { id:'ORD-102', cliente:'Metalúrgica Norte', origen:'Zárate', destino:'Córdoba', estado:'En preparación',
-            terminal:'-', contenedor:'-', tipo:'-', taraKg:'', precinto:'', pesoBrutoKg:'', fecha:'2025-08-12',
-            chofer:{nombre:'',dni:'',cel:'',usuario:'',password:''},
-            tractor:{marca:'',modelo:'',anio:'',patente:'',sat:'-'},
-            semi:{marca:'',modelo:'',anio:'',patente:''}
-        }
-    ],
-    legajos:[
-        { id:'LEG-0240', cliente:'Metalúrgica Norte', tipo:'Importación', estado:'Documentación OK' },
-        { id:'LEG-0241', cliente:'Agro Sur', tipo:'Exportación', estado:'Esperando verificación' }
-    ],
-    tickets:[
-        { id:'TCK-0502', cliente:'ACME S.A.', asunto:'Demora entrega', estado:'Abierto' },
-        { id:'TCK-0501', cliente:'Agro Sur', asunto:'Cotización', estado:'Cerrado' }
-    ]
-};
+/* ============== LEGAJOS / TICKETS (API) ============== */
+const apiListarLegajos = () => apiGet('/api/legajos');
+const apiListarTickets = () => apiGet('/api/tickets');
 
 /* ===== Auth demo ===== */
 const USERS = [
@@ -94,123 +75,106 @@ const ROLE_ROUTES = {
     CLIENTE: ['clientes','cargas','aduana','facturas'],
     GUEST:   PUBLIC_ROUTES
 };
-function canAccess(route){
-    const r = getRole();
-    return (ROLE_ROUTES[r] || []).includes(route);
-}
+function canAccess(route){ return (ROLE_ROUTES[getRole()] || []).includes(route); }
 
 /* ===== Vistas ===== */
 const Views = {
     home: () => `
-  <div class="card p-4">
-    <h4 class="mb-3">Zuidwijk & Asociados SRL</h4>
-    <p>Zuidwijk & Asociados es una <strong>empresa joven</strong>, con personal de amplia y reconocida experiencia en el mercado.</p>
-    <p>Somos <strong>Consultores en Comercio Exterior</strong>. Analizamos su negocio integralmente, optimizamos su cadena logística y mejoramos tiempos y rentabilidad.</p>
-    <p>Nuestra <strong>misión</strong> es ofrecer servicios integrales en el manejo de mercaderías con <em>responsabilidad</em> y <em>experiencia</em>.</p>
-    <h6 class="mt-3">Aliados estratégicos:</h6>
-    <ul class="mb-2">
-      <li>Terminales portuarias</li><li>Transportistas</li><li>Despachantes</li><li>Depósitos para des/consolidados</li><li>Seguros</li>
-    </ul>
-    <p><strong>¿Por qué elegirnos?</strong> Vemos su negocio como propio y lo analizamos desde todas las perspectivas para encontrar juntos la forma de hacerlo más productivo.</p>
-  </div>`,
+    <div class="card p-4">
+      <h4 class="mb-3">Zuidwijk & Asociados SRL</h4>
+      <p>Zuidwijk & Asociados es una <strong>empresa joven</strong>, con personal de amplia y reconocida experiencia en el mercado.</p>
+      <p>Somos <strong>Consultores en Comercio Exterior</strong>. Analizamos su negocio integralmente, optimizamos su cadena logística y mejoramos tiempos y rentabilidad.</p>
+      <p>Nuestra <strong>misión</strong> es ofrecer servicios integrales en el manejo de mercaderías con <em>responsabilidad</em> y <em>experiencia</em>.</p>
+      <h6 class="mt-3">Aliados estratégicos:</h6>
+      <ul class="mb-2">
+        <li>Terminales portuarias</li><li>Transportistas</li><li>Despachantes</li><li>Depósitos para des/consolidados</li><li>Seguros</li>
+      </ul>
+      <p><strong>¿Por qué elegirnos?</strong> Vemos su negocio como propio y lo analizamos desde todas las perspectivas para encontrar juntos la forma de hacerlo más productivo.</p>
+    </div>`,
 
     cargas: () => `
-  <div class="card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <div>
-        <h5 class="m-0">Gestión de Cargas</h5>
-        <small class="text-muted">Registrar, ver y seguir órdenes de transporte.</small>
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <h5 class="m-0">Gestión de Cargas</h5>
+          <small class="text-muted">Registrar, ver y seguir órdenes de transporte.</small>
+        </div>
+        ${getRole()==='ADMIN' ? '<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>' : ''}
       </div>
-      ${getRole()==='ADMIN' ? '<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>' : ''}
-    </div>
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead><tr>
-          <th>#</th><th>Cliente</th><th>Origen</th><th>Destino</th>
-          <th>Terminal</th><th>Contenedor</th><th>Precinto</th><th>Peso Bruto</th>
-          <th>Estado</th><th>Acciones</th>
-        </tr></thead>
-        <tbody id="tablaCargas"></tbody>
-      </table>
-    </div>
-  </div>`,
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr>
+            <th>#</th><th>Cliente</th><th>Origen</th><th>Destino</th>
+            <th>Terminal</th><th>Contenedor</th><th>Precinto</th><th>Peso Bruto</th>
+            <th>Estado</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tablaCargas"></tbody>
+        </table>
+      </div>
+    </div>`,
 
     aduana: () => `
-  <div class="card p-3">
-    <h5 class="mb-3">Gestión Aduanera</h5>
-    <ul class="list-group">
-      ${DB.legajos.map(l => `
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <div><strong>${l.id}</strong> • ${l.cliente} • ${l.tipo} • ${l.estado}</div>
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-legajo" data-id="${l.id}">Ver</button>
-        </li>`).join('')}
-    </ul>
-  </div>`,
+    <div class="card p-3">
+      <h5 class="mb-3">Gestión Aduanera</h5>
+      <ul class="list-group" id="listLegajos"></ul>
+    </div>`,
 
     almacen: () => `
-  <div class="card p-4">
-    <h5>Almacenamiento</h5>
-    <p class="text-muted m-0">Módulo demostrativo.</p>
-  </div>`,
+    <div class="card p-4">
+      <h5>Almacenamiento</h5>
+      <p class="text-muted m-0">Módulo demostrativo.</p>
+    </div>`,
 
     clientes: () => `
-  <div class="card p-3">
-    <h5 class="mb-3">Atención al Cliente</h5>
-    <ul class="list-group">
-      ${DB.tickets.map(t => `
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <div><strong>${t.id}</strong> • ${t.cliente} • ${t.asunto} • ${t.estado}</div>
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-ticket" data-id="${t.id}">Ver</button>
-        </li>`).join('')}
-    </ul>
-  </div>`,
+    <div class="card p-3">
+      <h5 class="mb-3">Atención al Cliente</h5>
+      <ul class="list-group" id="listTickets"></ul>
+    </div>`,
 
     admin: () => `
-  <div class="card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="m-0">Administración</h5>
-      <div>
-        <button class="btn btn-outline-secondary btn-sm me-2" id="btnVerFacturas">Ver facturas</button>
-        <button class="btn btn-primary btn-sm" id="btnEmitirFactura">Emitir factura</button>
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="m-0">Administración</h5>
+        <div>
+          <button class="btn btn-outline-secondary btn-sm me-2" id="btnVerFacturas">Ver facturas</button>
+          <button class="btn btn-primary btn-sm" id="btnEmitirFactura">Emitir factura</button>
+        </div>
       </div>
-    </div>
-    <div class="text-muted small">Emití nuevas facturas y consultá las emitidas.</div>
-  </div>
-`,
+      <div class="text-muted small">Emití nuevas facturas y consultá las emitidas.</div>
+    </div>`,
 
     facturas: () => `
-  <div class="card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <div>
-        <h5 class="m-0">Facturas emitidas</h5>
-        <small class="text-muted">Listado de facturas guardadas en el sistema.</small>
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <h5 class="m-0">Facturas emitidas</h5>
+          <small class="text-muted">Listado de facturas guardadas en el sistema.</small>
+        </div>
+        ${getRole()==='ADMIN' ? '<button class="btn btn-primary btn-sm" id="btnEmitirFactura">+ Emitir factura</button>' : ''}
       </div>
-      ${getRole()==='ADMIN' ? '<button class="btn btn-primary btn-sm" id="btnEmitirFactura">+ Emitir factura</button>' : ''}
-    </div>
 
-    <div class="row g-2 mb-2">
-      <div class="col-md-4">
-        <input id="filterCliente" class="form-control" placeholder="Filtrar por cliente…">
+      <div class="row g-2 mb-2">
+        <div class="col-md-4">
+          <input id="filterCliente" class="form-control" placeholder="Filtrar por cliente…">
+        </div>
+        <div class="col-md-2">
+          <button id="btnBuscarFactura" class="btn btn-outline-secondary w-100">Buscar</button>
+        </div>
       </div>
-      <div class="col-md-2">
-        <button id="btnBuscarFactura" class="btn btn-outline-secondary w-100">Buscar</button>
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>#</th><th>Cliente</th><th>CUIT</th><th>Fecha</th>
+              <th>Detalle</th><th>Cant.</th><th>Precio (ARS)</th>
+              <th>Importe (ARS)</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaFacturas"></tbody>
+        </table>
       </div>
-    </div>
-
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>#</th><th>Cliente</th><th>CUIT</th><th>Fecha</th>
-            <th>Detalle</th><th>Importe (ARS)</th><th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tablaFacturas"></tbody>
-      </table>
-    </div>
-  </div>`,
-
+    </div>`,
     notfound: () => `<div class="card p-4">Ruta no encontrada.</div>`
 };
 
@@ -225,21 +189,15 @@ function setActive(route){
         admin:'Administración', facturas:'Facturas'
     };
     document.getElementById('page-title').textContent = mapTitle[route] || route;
-    document.getElementById('page-subtitle').textContent =
-        route==='home' ? 'Acerca de nosotros' : '';
+    document.getElementById('page-subtitle').textContent = route==='home' ? 'Acerca de nosotros' : '';
 }
 
 function render(route){
     const target = (route || (location.hash||'#home').slice(1));
     const isAuth = isLoggedIn();
 
-    // si está logueado, ocultar home/login
     let r = target;
-    if(isAuth && (r==='home' || r==='login')){
-        r = getRole()==='ADMIN' ? 'cargas' : 'clientes';
-        location.hash = '#'+r;
-    }
-    // permisos
+    if(isAuth && (r==='home' || r==='login')){ r = getRole()==='ADMIN' ? 'cargas' : 'clientes'; location.hash = '#'+r; }
     if(!isAuth && !PUBLIC_ROUTES.includes(r)){ r='login'; location.hash='#login'; }
     if(isAuth && !canAccess(r)){ r = getRole()==='ADMIN' ? 'cargas' : 'clientes'; location.hash='#'+r; }
 
@@ -255,6 +213,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         a.addEventListener('click', (ev)=>{/* solo hashchange */});
     });
     document.getElementById('logout')?.addEventListener('click', (e)=>{ e.preventDefault(); logout(); });
+    setupCargasDelegation(); // <-- importantísimo: delegación de eventos para Cargas
     updateAuthUI();
     render();
 });
@@ -293,13 +252,10 @@ function chipEstado(e){
 
 /* ============= MODAL (instancia única) ============= */
 let APP_MODAL = null, APP_MODAL_EL = null;
-
 function ensureModal() {
     if (!APP_MODAL_EL) APP_MODAL_EL = document.getElementById('appModal');
     if (!APP_MODAL) {
-        APP_MODAL = bootstrap.Modal.getOrCreateInstance(APP_MODAL_EL, {
-            backdrop: true, keyboard: true
-        });
+        APP_MODAL = bootstrap.Modal.getOrCreateInstance(APP_MODAL_EL, { backdrop: true, keyboard: true });
     }
     return APP_MODAL;
 }
@@ -312,365 +268,590 @@ function openModal({ title = '', body = '', footer = '' }) {
     APP_MODAL.show();
 }
 
-/* ===== Cargas (CRUD demo) ===== */
-function bindCargasEvents(){
-    document.getElementById('btnNuevaCarga')?.addEventListener('click', ()=> showCargaForm());
-    document.querySelectorAll('[data-action="ver-carga"]').forEach(b=> b.onclick = ()=> showCargaView(b.dataset.id));
-    if (getRole()==='ADMIN'){
-        document.querySelectorAll('[data-action="edit-carga"]').forEach(b=> b.onclick = ()=> showCargaForm(b.dataset.id));
-        document.querySelectorAll('[data-action="del-carga"]').forEach(b=> b.onclick = ()=> deleteCarga(b.dataset.id));
-    }
-}
-function renderCargasTable(){
-    const tbody = document.getElementById('tablaCargas'); if(!tbody) return;
+/* ============= CARGAS (UI con delegación) ============= */
+async function renderCargasTable(){
+    const tbody = document.getElementById('tablaCargas');
+    if (!tbody) return;
+
+    let cargas = [];
+    try { cargas = await apiListarCargas(); }
+    catch(e){ console.error('No se pudieron listar cargas:', e); alert('No se pudieron cargar las cargas.'); return; }
+
     const isAdmin = getRole()==='ADMIN';
-    tbody.innerHTML = DB.cargas.map(c=>`
+    tbody.innerHTML = (cargas||[]).map(c=>`
     <tr>
       <td>${c.id}</td>
-      <td>${c.cliente}</td>
-      <td>${c.origen}</td>
-      <td>${c.destino}</td>
+      <td>${c.cliente||''}</td>
+      <td>${c.origen||''}</td>
+      <td>${c.destino||''}</td>
       <td>${c.terminal||'-'}</td>
       <td>${c.contenedor||'-'}</td>
       <td>${c.precinto||'-'}</td>
-      <td>${c.pesoBrutoKg||'-'}</td>
-      <td>${chipEstado(c.estado)}</td>
+      <td>${c.pesoBrutoKg ?? '-'}</td>
+      <td>${chipEstado(c.estado||'En preparación')}</td>
       <td class="text-nowrap">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-carga" data-id="${c.id}">Ver</button>
         ${isAdmin ? `
           <button type="button" class="btn btn-outline-primary btn-sm" data-action="edit-carga" data-id="${c.id}">Editar</button>
           <button type="button" class="btn btn-outline-danger btn-sm" data-action="del-carga" data-id="${c.id}">Eliminar</button>
-        `:''}
+        ` : ''}
       </td>
     </tr>`).join('');
-    bindCargasEvents();
 }
-function showCargaView(id){
-    const c = DB.cargas.find(x=>x.id===id); if(!c) return;
+
+// Delegación (una sola vez)
+let CARGAS_EVENTS_WIRED = false;
+function setupCargasDelegation(){
+    if (CARGAS_EVENTS_WIRED) return;
+    CARGAS_EVENTS_WIRED = true;
+
+    document.getElementById('view').addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
+
+        // + Nueva Carga
+        if (btn.id === 'btnNuevaCarga') {
+            showCargaFormAPI(null);
+            return;
+        }
+
+        // Acciones de tabla
+        const action = btn.dataset.action;
+        if (!action) return;
+
+        const id = btn.dataset.id; // conservar como string
+        try {
+            if (action === 'ver-carga') {
+                const c = await apiObtenerCarga(id);
+                if (!c) throw new Error('no encontrada');
+                showCargaViewFromObj(c);
+            }
+            else if (action === 'edit-carga') {
+                if (getRole() !== 'ADMIN') { alert('Solo ADMIN.'); return; }
+                const c = await apiObtenerCarga(id);
+                if (!c) throw new Error('no encontrada');
+                showCargaFormAPI(c);
+            }
+            else if (action === 'del-carga') {
+                if (getRole() !== 'ADMIN') { alert('Solo ADMIN.'); return; }
+                if (!confirm(`¿Eliminar la orden ${id}?`)) return;
+                await apiEliminarCarga(id);
+                await renderCargasTable();
+            }
+        } catch (e) {
+            console.error('Acción Cargas error:', e);
+            alert('Operación de carga falló: ' + (e?.message || 'ver consola'));
+        }
+    });
+}
+
+function showCargaViewFromObj(c){
     openModal({
         title:`Orden ${c.id}`,
         body: `
       <div class="row g-2">
-        <div class="col-md-4"><strong>Cliente:</strong> ${c.cliente}</div>
+        <div class="col-md-4"><strong>Cliente:</strong> ${c.cliente||'-'}</div>
         <div class="col-md-4"><strong>Fecha:</strong> ${c.fecha||'-'}</div>
-        <div class="col-md-4"><strong>Estado:</strong> ${c.estado}</div>
-        <div class="col-md-3"><strong>Origen:</strong> ${c.origen}</div>
-        <div class="col-md-3"><strong>Destino:</strong> ${c.destino}</div>
+        <div class="col-md-4"><strong>Estado:</strong> ${c.estado||'-'}</div>
+        <div class="col-md-3"><strong>Origen:</strong> ${c.origen||'-'}</div>
+        <div class="col-md-3"><strong>Destino:</strong> ${c.destino||'-'}</div>
         <div class="col-md-3"><strong>Terminal:</strong> ${c.terminal||'-'}</div>
         <div class="col-md-3"><strong>Contenedor:</strong> ${c.contenedor||'-'}</div>
-        <div class="col-md-3"><strong>Tipo:</strong> ${c.tipo||'-'}</div>
         <div class="col-md-3"><strong>Tara (Kg):</strong> ${c.taraKg||'-'}</div>
         <div class="col-md-3"><strong>Precinto:</strong> ${c.precinto||'-'}</div>
         <div class="col-md-3"><strong>Peso bruto (Kg):</strong> ${c.pesoBrutoKg||'-'}</div>
-        <div class="col-12"><hr></div>
-        <div class="col-md-4"><strong>Chofer:</strong> ${c.chofer?.nombre||'-'}</div>
-        <div class="col-md-4"><strong>DNI:</strong> ${c.chofer?.dni||'-'}</div>
-        <div class="col-md-4"><strong>Cel:</strong> ${c.chofer?.cel||'-'}</div>
-        <div class="col-md-3"><strong>Tractor:</strong> ${c.tractor?.marca||'-'} ${c.tractor?.modelo||''}</div>
-        <div class="col-md-3"><strong>Patente:</strong> ${c.tractor?.patente||'-'}</div>
-        <div class="col-md-3"><strong>Sat:</strong> ${c.tractor?.sat||'-'}</div>
-        <div class="col-md-3"><strong>Semi:</strong> ${c.semi?.marca||'-'} ${c.semi?.modelo||''} (${c.semi?.patente||'-'})</div>
-      </div>`,
-        footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            ${getRole()==='ADMIN'?'<button class="btn btn-primary" id="goEditCarga">Editar</button>':''}`
+      </div>`
     });
-    document.getElementById('goEditCarga')?.addEventListener('click', ()=>{ ensureModal().hide(); showCargaForm(id); });
 }
-function showCargaForm(id){
-    const isEdit = !!id;
-    const c = isEdit ? DB.cargas.find(x=>x.id===id) : {
+
+function showCargaFormAPI(c){
+    const isEdit = !!c;
+    const init = c || {
         id:'', cliente:'', origen:'', destino:'', estado:'En preparación',
-        terminal:'', contenedor:'', tipo:'', taraKg:'', precinto:'', pesoBrutoKg:'', fecha:'',
-        chofer:{nombre:'',dni:'',cel:'',usuario:'',password:''},
-        tractor:{marca:'',modelo:'',anio:'',patente:'',sat:''},
-        semi:{marca:'',modelo:'',anio:'',patente:''}
+        terminal:'', contenedor:'', taraKg:'', precinto:'', pesoBrutoKg:'', fecha:''
     };
+
     openModal({
-        title: isEdit ? `Editar carga ${c.id}`:'Nueva Carga',
+        title: isEdit? `Editar carga ${init.id}`:'Nueva Carga',
         body: `
       <form id="formCarga" class="row g-3">
         <div class="col-md-3"><label class="form-label">ID Orden</label>
-          <input class="form-control" name="id" value="${c.id}" ${isEdit?'readonly':''} required></div>
+          <input class="form-control" name="id" value="${init.id||''}" ${isEdit?'readonly':''} required></div>
         <div class="col-md-5"><label class="form-label">Cliente</label>
-          <input class="form-control" name="cliente" value="${c.cliente}" required></div>
+          <input class="form-control" name="cliente" value="${init.cliente||''}" required></div>
         <div class="col-md-2"><label class="form-label">Fecha</label>
-          <input type="date" class="form-control" name="fecha" value="${c.fecha||''}"></div>
+          <input type="date" class="form-control" name="fecha" value="${init.fecha||''}"></div>
         <div class="col-md-2"><label class="form-label">Estado</label>
           <select class="form-select" name="estado">
-            ${['En preparación','En tránsito','Entregado','Demorado'].map(e=>`<option ${e===c.estado?'selected':''}>${e}</option>`).join('')}
+            ${['En preparación','En tránsito','Entregado','Demorado'].map(e=>`<option ${e===init.estado?'selected':''}>${e}</option>`).join('')}
           </select></div>
 
         <div class="col-md-3"><label class="form-label">Origen</label>
-          <input class="form-control" name="origen" value="${c.origen}" required></div>
+          <input class="form-control" name="origen" value="${init.origen||''}" required></div>
         <div class="col-md-3"><label class="form-label">Destino</label>
-          <input class="form-control" name="destino" value="${c.destino}" required></div>
-        <div class="col-md-3"><label class="form-label">Terminal portuaria</label>
-          <input class="form-control" name="terminal" value="${c.terminal||''}"></div>
+          <input class="form-control" name="destino" value="${init.destino||''}" required></div>
+        <div class="col-md-3"><label class="form-label">Terminal</label>
+          <input class="form-control" name="terminal" value="${init.terminal||''}"></div>
         <div class="col-md-3"><label class="form-label">Contenedor</label>
-          <input class="form-control" name="contenedor" value="${c.contenedor||''}"></div>
+          <input class="form-control" name="contenedor" value="${init.contenedor||''}"></div>
 
-        <div class="col-md-3"><label class="form-label">Tipo</label>
-          <input class="form-control" name="tipo" value="${c.tipo||''}"></div>
         <div class="col-md-3"><label class="form-label">Tara (Kg)</label>
-          <input type="number" class="form-control" name="taraKg" value="${c.taraKg||''}"></div>
+          <input class="form-control" name="taraKg" value="${init.taraKg||''}"></div>
         <div class="col-md-3"><label class="form-label">Precinto</label>
-          <input class="form-control" name="precinto" value="${c.precinto||''}"></div>
+          <input class="form-control" name="precinto" value="${init.precinto||''}"></div>
         <div class="col-md-3"><label class="form-label">Peso bruto (Kg)</label>
-          <input type="number" class="form-control" name="pesoBrutoKg" value="${c.pesoBrutoKg||''}"></div>
-
-        <div class="col-12"><h6 class="mt-2">Datos de Chofer</h6><hr></div>
-        <div class="col-md-4"><label class="form-label">Nombre</label>
-          <input class="form-control" name="ch_nombre" value="${c.chofer?.nombre||''}"></div>
-        <div class="col-md-4"><label class="form-label">DNI</label>
-          <input class="form-control" name="ch_dni" value="${c.chofer?.dni||''}"></div>
-        <div class="col-md-4"><label class="form-label">Celular</label>
-          <input class="form-control" name="ch_cel" value="${c.chofer?.cel||''}"></div>
-        <div class="col-md-4"><label class="form-label">Usuario</label>
-          <input class="form-control" name="ch_user" value="${c.chofer?.usuario||''}"></div>
-        <div class="col-md-4"><label class="form-label">Contraseña</label>
-          <input class="form-control" name="ch_pass" value="${c.chofer?.password||''}"></div>
-
-        <div class="col-12"><h6 class="mt-2">Tractor</h6><hr></div>
-        <div class="col-md-3"><label class="form-label">Marca</label>
-          <input class="form-control" name="tr_marca" value="${c.tractor?.marca||''}"></div>
-        <div class="col-md-3"><label class="form-label">Modelo</label>
-          <input class="form-control" name="tr_modelo" value="${c.tractor?.modelo||''}"></div>
-        <div class="col-md-2"><label class="form-label">Año</label>
-          <input class="form-control" name="tr_anio" value="${c.tractor?.anio||''}"></div>
-        <div class="col-md-2"><label class="form-label">Patente</label>
-          <input class="form-control" name="tr_patente" value="${c.tractor?.patente||''}"></div>
-        <div class="col-md-2"><label class="form-label">Marca satelital</label>
-          <input class="form-control" name="tr_sat" value="${c.tractor?.sat||''}"></div>
-
-        <div class="col-12"><h6 class="mt-2">Semi</h6><hr></div>
-        <div class="col-md-3"><label class="form-label">Marca</label>
-          <input class="form-control" name="se_marca" value="${c.semi?.marca||''}"></div>
-        <div class="col-md-3"><label class="form-label">Modelo</label>
-          <input class="form-control" name="se_modelo" value="${c.semi?.modelo||''}"></div>
-        <div class="col-md-3"><label class="form-label">Año</label>
-          <input class="form-control" name="se_anio" value="${c.semi?.anio||''}"></div>
-        <div class="col-md-3"><label class="form-label">Patente</label>
-          <input class="form-control" name="se_patente" value="${c.semi?.patente||''}"></div>
-      </form>
-    `,
-        footer: `<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-             <button class="btn btn-primary" id="saveCarga">Guardar</button>`
+          <input class="form-control" name="pesoBrutoKg" value="${init.pesoBrutoKg||''}"></div>
+      </form>`,
+        footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button class="btn btn-primary" id="saveCarga">${isEdit?'Guardar':'Crear'}</button>`
     });
 
-    document.getElementById('saveCarga').addEventListener('click', ()=>{
-        const f = document.getElementById('formCarga');
-        const fd = Object.fromEntries(new FormData(f));
-        const pack = {
+    document.getElementById('saveCarga').onclick = async ()=>{
+        const fd = Object.fromEntries(new FormData(document.getElementById('formCarga')));
+        const payload = {
             id: fd.id, cliente: fd.cliente, origen: fd.origen, destino: fd.destino, estado: fd.estado,
-            terminal: fd.terminal, contenedor: fd.contenedor, tipo: fd.tipo, taraKg: fd.taraKg,
-            precinto: fd.precinto, pesoBrutoKg: fd.pesoBrutoKg, fecha: fd.fecha,
-            chofer:{ nombre:fd.ch_nombre, dni:fd.ch_dni, cel:fd.ch_cel, usuario:fd.ch_user, password:fd.ch_pass },
-            tractor:{ marca:fd.tr_marca, modelo:fd.tr_modelo, anio:fd.tr_anio, patente:fd.tr_patente, sat:fd.tr_sat },
-            semi:{ marca:fd.se_marca, modelo:fd.se_modelo, anio:fd.se_anio, patente:fd.se_patente }
+            terminal: fd.terminal, contenedor: fd.contenedor, taraKg: fd.taraKg,
+            precinto: fd.precinto, pesoBrutoKg: fd.pesoBrutoKg, fecha: fd.fecha || null
         };
-        if(!pack.id){ alert('ID obligatorio'); return; }
-        if(isEdit){
-            const i = DB.cargas.findIndex(x=>x.id===id);
-            DB.cargas[i] = {...DB.cargas[i], ...pack};
-        } else {
-            if(DB.cargas.some(x=>x.id===pack.id)){ alert('El ID ya existe'); return; }
-            DB.cargas.unshift(pack);
+
+        try{
+            if(isEdit) await apiActualizarCarga(fd.id, payload);
+            else       await apiCrearCarga(payload);
+            ensureModal().hide();
+            await renderCargasTable();
+        }catch(e){
+            console.error(e);
+            alert('No se pudo guardar la carga.');
         }
-        ensureModal().hide();
-        render('cargas');
-    });
-}
-function deleteCarga(id){
-    if(!confirm(`¿Eliminar la orden ${id}?`)) return;
-    DB.cargas = DB.cargas.filter(x=>x.id!==id);
-    renderCargasTable();
-}
-
-/* ===== Aduana / Tickets ===== */
-function bindAduanaEvents(){
-    document.querySelectorAll('[data-action="ver-legajo"]').forEach(b=>{
-        b.onclick = ()=>{
-            const lg = DB.legajos.find(x=>x.id===b.dataset.id);
-            openModal({
-                title:`Legajo ${lg.id}`,
-                body:`<p><strong>Cliente:</strong> ${lg.cliente}</p>
-              <p><strong>Tipo:</strong> ${lg.tipo}</p>
-              <p><strong>Estado:</strong> ${lg.estado}</p>`
-            });
-        };
-    });
-}
-function bindTicketsEvents(){
-    document.querySelectorAll('[data-action="ver-ticket"]').forEach(b=>{
-        b.onclick = ()=>{
-            const t = DB.tickets.find(x=>x.id===b.dataset.id);
-            openModal({
-                title:`Ticket ${t.id}`,
-                body:`<p><strong>Cliente:</strong> ${t.cliente}</p>
-              <p><strong>Asunto:</strong> ${t.asunto}</p>
-              <p><strong>Estado:</strong> ${t.estado}</p>`
-            });
-        };
-    });
-}
-
-/* ===== Facturas (UI que usa backend) ===== */
-async function cargarFacturas() {
-    try {
-        const filtro = document.getElementById('filterCliente')?.value || '';
-        const data = await apiListarFacturas(filtro);
-
-        // Si estoy en vista "Facturas", llená la tabla. Si no, mostramos modal.
-        const tbody = document.getElementById('tablaFacturas');
-        if (tbody) {
-            tbody.innerHTML = data.map(f => `
-        <tr>
-          <td>${f.id ?? ''}</td>
-          <td>${f.cliente ?? ''}</td>
-          <td>${f.cuit ?? '-'}</td>
-          <td>${f.fecha ?? '-'}</td>
-          <td>${f.detalle ?? '-'}</td>
-          <td>${(f.total ?? 0).toFixed ? f.total.toFixed(2) : f.total}</td>
-          <td>${f.estado ?? '-'}</td>
-          <td></td>
-        </tr>`).join('');
-        } else {
-            openModal({
-                title: 'Facturas',
-                body: `
-          <div class="table-responsive">
-            <table class="table table-sm">
-              <thead><tr>
-                <th>#</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th>
-              </tr></thead>
-              <tbody>
-                ${data.map(f => `
-                  <tr>
-                    <td>${f.id ?? ''}</td>
-                    <td>${f.cliente ?? ''}</td>
-                    <td>${f.fecha ?? ''}</td>
-                    <td>${f.estado ?? ''}</td>
-                    <td>${(f.total ?? 0).toFixed ? f.total.toFixed(2) : f.total}</td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>`
-            });
-        }
-        return data;
-    } catch (e) {
-        console.error(e);
-        alert('No se pudo cargar el listado de facturas.');
-        return [];
-    }
-}
-
-/* ============= EMITIR FACTURA (usa API_BASE) ============= */
-function wireFacturaButton() {
-    const btn = document.getElementById('btnEmitirFactura');
-    if (!btn) return;
-
-    btn.onclick = () => {
-        openModal({
-            title: 'Emitir Factura',
-            body: `
-        <form id="formFactura" class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Cliente</label>
-            <input name="cliente" class="form-control" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">CUIT</label>
-            <input name="cuit" class="form-control">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Fecha</label>
-            <input type="date" name="fecha" value="${new Date().toISOString().slice(0,10)}" class="form-control">
-          </div>
-          <div class="col-md-8">
-            <label class="form-label">Detalle</label>
-            <input name="detalle" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Importe (ARS)</label>
-            <input type="number" step="0.01" name="importe" class="form-control" required>
-          </div>
-        </form>
-      `,
-            footer: `
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-primary" id="saveFactura">Emitir</button>
-      `
-        });
-
-        document.getElementById('saveFactura')?.addEventListener('click', async () => {
-            const fd = Object.fromEntries(new FormData(document.getElementById('formFactura')));
-            if (!fd.cliente || !fd.detalle || !fd.importe) {
-                alert('Completá los campos obligatorios.');
-                return;
-            }
-
-            const payload = {
-                cliente: fd.cliente,
-                cuit: fd.cuit || null,
-                fecha: fd.fecha,                       // yyyy-MM-dd
-                total: Number(fd.importe),             // el backend espera total (número)
-                estado: "EMITIDA",
-                detalle: fd.detalle
-                // numero: 'opcional-único' // si lo usás, debe ser único
-            };
-
-            try {
-                const data = await apiCrearFactura(payload);
-                ensureModal().hide();
-                alert(`Factura emitida Nº ${data.id} para ${data.cliente} por ARS ${data.total}.`);
-                // si estoy en vista facturas, refresco
-                if ((location.hash||'').includes('facturas')) {
-                    await cargarFacturas();
-                }
-            } catch (e) {
-                console.error('POST /api/facturas error:', e);
-                alert('No se pudo emitir la factura. Revisá consola/Network.');
-            }
-        });
     };
 }
 
-/* ============= VER FACTURAS EMITIDAS ============= */
+/* ============= LEGAJOS / TICKETS (UI) ============= */
+async function renderLegajos(){
+    const ul = document.getElementById('listLegajos');
+    if (!ul) return;
+    try {
+        const list = await apiListarLegajos();
+        ul.innerHTML = list.map(l => `
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div><strong>${l.codigo||('LEG-'+l.id)}</strong> • ${l.cliente} • ${l.tipo} • ${l.estado}</div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-legajo" data-id="${l.id}">Ver</button>
+      </li>`).join('');
+        document.querySelectorAll('[data-action="ver-legajo"]').forEach(b=>{
+            b.onclick = ()=>{
+                const id = Number(b.dataset.id);
+                const lg = list.find(x=>x.id===id);
+                openModal({ title:`Legajo ${lg.codigo||lg.id}`,
+                    body:`<p><strong>Cliente:</strong> ${lg.cliente}</p>
+                <p><strong>Tipo:</strong> ${lg.tipo}</p>
+                <p><strong>Estado:</strong> ${lg.estado}</p>` });
+            };
+        });
+    } catch(e){ console.error(e); ul.innerHTML = '<li class="list-group-item text-muted">No se pudieron cargar los legajos.</li>'; }
+}
+
+async function renderTickets(){
+    const ul = document.getElementById('listTickets');
+    if (!ul) return;
+    try {
+        const list = await apiListarTickets();
+        ul.innerHTML = list.map(t => `
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div><strong>${t.codigo||('TCK-'+t.id)}</strong> • ${t.cliente} • ${t.asunto} • ${t.estado}</div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-ticket" data-id="${t.id}">Ver</button>
+      </li>`).join('');
+        document.querySelectorAll('[data-action="ver-ticket"]').forEach(b=>{
+            b.onclick = ()=>{
+                const id = Number(b.dataset.id);
+                const t = list.find(x=>x.id===id);
+                openModal({ title:`Ticket ${t.codigo||t.id}`,
+                    body:`<p><strong>Cliente:</strong> ${t.cliente}</p>
+                <p><strong>Asunto:</strong> ${t.asunto}</p>
+                <p><strong>Estado:</strong> ${t.estado}</p>` });
+            };
+        });
+    } catch(e){ console.error(e); ul.innerHTML = '<li class="list-group-item text-muted">No se pudieron cargar los tickets.</li>'; }
+}
+
+/* ============= FACTURAS (UI) ============= */
+// --- helpers seguros ---
+const num = v => (v == null || v === '' || isNaN(v)) ? 0 : Number(v);
+const money = v => (v == null || v === '' || isNaN(v)) ? '' : Number(v).toFixed(2);
+const safe = v => (v == null ? '' : v);
+
+// total calculado por si no viene del backend
+const facturaTotal = (f) => {
+  if (Array.isArray(f.detalles) && f.detalles.length) {
+    return f.detalles.reduce((s, d) => s + num(d.cantidad) * num(d.precioUnitario), 0);
+  }
+  // compatibilidad con tus campos previos
+  if (f.importeTotal != null) return num(f.importeTotal);
+  if (f.total != null)       return num(f.total);
+  // por si tenés neto + iva
+  return num(f.importeNetoGravado) + num(f.importeIva);
+};
+
+async function cargarFacturas() {
+  try {
+    const filtro = document.getElementById('filterCliente')?.value || '';
+    const data = await apiListarFacturas(filtro);
+    const tbody = document.getElementById('tablaFacturas');
+    if (!tbody) return data;
+
+    const fmt = v => Number(v ?? 0).toFixed(2);
+    const safe = s => (s ?? '');
+
+    tbody.innerHTML = (data || []).map(f => {
+      const pv  = f?.puntoVenta != null ? String(f.puntoVenta).padStart(5,'0') : '--';
+      const nro = f?.numero     != null ? String(f.numero).padStart(8,'0')
+                                        : (f?.id != null ? String(f.id).padStart(8,'0') : '--------');
+      const comp = `${pv}-${nro}`;
+      const acc = (f?.estado !== 'ANULADA')
+        ? `<button class="btn btn-outline-danger btn-sm" data-action="anular" data-id="${f?.id}">Anular</button>`
+        : `<span class="badge text-bg-secondary">Anulada ${f?.anulacionTipo ? '('+f.anulacionTipo+')' : ''}</span>`;
+
+      // Campo “detalle” visible: si hay items, muestro la 1ª línea; si no, uso f.detalle.
+      let detalleVis = safe(f?.detalle);
+      if (!detalleVis && Array.isArray(f?.detalles) && f.detalles.length > 0) {
+        const it0 = f.detalles[0];
+        detalleVis = safe(it0?.descripcion);
+      }
+
+      // Totales: si vienen en el objeto, OK; si no, calculo desde items
+      let neto   = f?.importeNetoGravado;
+      let iva    = f?.importeIva;
+      let total  = f?.importeTotal;
+
+      if ((neto == null || total == null) && Array.isArray(f?.detalles)) {
+        const sum = f.detalles.reduce((acc, it) => acc + Number(it?.cantidad ?? 0) * Number(it?.precioUnitario ?? 0), 0);
+        if (neto == null)  neto = sum;
+        if (iva  == null)  iva  = 0;
+        if (total == null) total = neto + iva;
+      }
+
+      return `
+        <tr>
+          <td>${safe(f?.id)}</td>
+          <td>
+            <div>${safe(f?.tipo)} ${f?.codigoComprobante ? '(Cód. '+f.codigoComprobante+')' : ''}</div>
+            <small class="text-muted">${comp}</small>
+          </td>
+          <td>${safe(f?.cliente)}<br><small class="text-muted">${safe(f?.cuit) || '-'}</small></td>
+          <td>${safe(f?.fechaEmision) || safe(f?.fecha) || '-'}</td>
+          <td>${detalleVis || '-'}</td>
+          <td class="text-end">${fmt(neto)}</td>
+          <td class="text-end">${fmt(iva)}</td>
+          <td class="text-end fw-semibold">${fmt(total)}</td>
+          <td>${safe(f?.estado) || '-'}</td>
+          <td class="text-nowrap">${acc}</td>
+        </tr>`;
+    }).join('');
+
+    // Botones “Anular”
+    tbody.querySelectorAll('[data-action="anular"]').forEach(b => {
+      b.onclick = async () => {
+        const id = b.dataset.id;
+        const input = prompt('Anular con: escribí "NC" o "ND"');
+        const tipo  = (input || '').trim().toUpperCase();
+        if (tipo !== 'NC' && tipo !== 'ND') { alert('Debe ser NC o ND'); return; }
+        try {
+          await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=${encodeURIComponent(tipo)}`);
+          await cargarFacturas();
+        } catch (e) {
+          console.error(e);
+          alert('No se pudo anular la factura.');
+        }
+      };
+    });
+
+    return data;
+  } catch (e) {
+    console.error('GET /api/facturas fallo:', e);
+    alert('No se pudo cargar el listado de facturas.');
+    return [];
+  }
+}
+
+
+async function anularFactura(id) {
+  // pedir NC o ND
+  const input = prompt('¿Nota de Crédito (NC) o Nota de Débito (ND)?', 'NC');
+  if (!input) return;
+
+  const tipo = String(input).trim().toUpperCase();
+  if (tipo !== 'NC' && tipo !== 'ND') {
+    alert('Ingresá "NC" o "ND".');
+    return;
+  }
+
+  try {
+    await apiPut(`/api/facturas/${id}/anular?tipo=${encodeURIComponent(tipo)}`, {});
+    await cargarFacturas(); // refrescar tabla
+  } catch (e) {
+    console.error('PUT /api/facturas/{id}/anular falló:', e);
+    alert('Error al anular la factura.');
+  }
+}
+
+
+function bindFacturaEvents() {
+    document.querySelectorAll('[data-action="anular-factura"]').forEach(b => {
+        b.onclick = async () => {
+            const id = b.dataset.id;
+            const tipo = prompt("¿Nota de Crédito (NC) o Nota de Débito (ND)?", "NC");
+            if (!tipo) return;
+
+            try {
+                const res = await apiPost(`/api/facturas/${id}/anular?tipo=${tipo}`, {});
+                alert(`Se generó ${res.tipo} Nº ${res.id} vinculada a la factura ${id}`);
+                await cargarFacturas();
+            } catch (e) {
+                console.error(e);
+                alert("Error al anular la factura.");
+            }
+        };
+    });
+}
+
+
+function wireFacturaButton() {
+  const btn = document.getElementById('btnEmitirFactura');
+  if (!btn) return;
+
+  btn.onclick = () => {
+    openModal({
+      title: 'Emitir Factura',
+      body: `
+      <form id="formFactura" class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label">Tipo</label>
+          <select name="tipo" class="form-select">
+            <option value="A">A (Cód.01)</option>
+            <option value="FCE A">FCE A (Cód.201)</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cód.</label>
+          <select name="codigoComprobante" class="form-select">
+            <option value="01">01</option>
+            <option value="201">201</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Pto. Venta</label>
+          <input type="number" name="puntoVenta" value="2" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Número</label>
+          <input type="number" name="numero" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fecha Emisión</label>
+          <input type="date" name="fechaEmision" value="${new Date().toISOString().slice(0,10)}" class="form-control">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Cliente</label>
+          <input name="cliente" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">CUIT</label>
+          <input name="cuit" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cond. IVA</label>
+          <input name="condicionIVACliente" value="IVA Responsable Inscripto" class="form-control">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Domicilio</label>
+          <input name="domicilio" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Condición de venta</label>
+          <input name="condicionVenta" value="Cuenta Corriente" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Vto. de pago</label>
+          <input type="date" name="fechaVencimientoPago" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Período desde</label>
+          <input type="date" name="periodoDesde" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Período hasta</label>
+          <input type="date" name="periodoHasta" class="form-control">
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Detalle</label>
+          <textarea name="detalle" class="form-control" rows="3"
+            placeholder="Transporte... EBKG..., B/L..., contenedores..."></textarea>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Cantidad</label>
+          <input type="number" step="0.01" name="cantidad" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">U. Medida</label>
+          <input name="unidadMedida" value="unidades" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Precio Unit.</label>
+          <input type="number" step="0.01" name="precioUnitario" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">% Bonif.</label>
+          <input type="number" step="0.01" name="bonificacionPct" value="0" class="form-control">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Alícuota IVA</label>
+          <select name="alicuotaIvaPct" class="form-select">
+            <option value="21">21%</option>
+            <option value="10.5">10.5%</option>
+            <option value="27">27%</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Otros Tributos</label>
+          <input type="number" step="0.01" name="importeOtrosTributos" value="0" class="form-control">
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="esFCE" checked>
+            <label class="form-check-label" for="esFCE">FCE (mostrar CBU / Alias / Opc. Circulación)</label>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">CBU Emisor</label>
+          <input name="cbuEmisor" class="form-control" placeholder="0070...">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Alias CBU</label>
+          <input name="aliasCbu" class="form-control" placeholder="ZUIDNETHSBC">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Opción Circulación</label>
+          <input name="opcionCirculacion" class="form-control" value="Sistema de Circulación Abierta">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">CAE</label>
+          <input name="cae" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Vto. CAE</label>
+          <input type="date" name="caeVencimiento" class="form-control">
+        </div>
+      </form>
+      `,
+      footer: `
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" form="formFactura">Emitir</button>
+      `
+    });
+
+    // ▶ manejar el SUBMIT del formulario (no el click del botón)
+    const form = document.getElementById('formFactura');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fd = Object.fromEntries(new FormData(form));
+      if (!fd.cliente || !fd.cantidad || !fd.precioUnitario) {
+        alert('Completá cliente, cantidad y precio unitario.');
+        return;
+      }
+
+      const payload = {
+        tipo: fd.tipo || "A",
+        codigoComprobante: fd.codigoComprobante || "01",
+        puntoVenta: fd.puntoVenta ? Number(fd.puntoVenta) : 2,
+        numero: fd.numero ? Number(fd.numero) : null,
+
+        fechaEmision: fd.fechaEmision || null,
+        fechaVencimientoPago: fd.fechaVencimientoPago || null,
+        periodoDesde: fd.periodoDesde || null,
+        periodoHasta: fd.periodoHasta || null,
+
+        cliente: fd.cliente,
+        cuit: fd.cuit || null,
+        domicilio: fd.domicilio || null,
+        condicionIVACliente: fd.condicionIVACliente || null,
+        condicionVenta: fd.condicionVenta || null,
+
+        detalle: fd.detalle || '',
+        cantidad: Number(fd.cantidad),
+        unidadMedida: fd.unidadMedida || 'unidades',
+        precioUnitario: Number(fd.precioUnitario),
+        bonificacionPct: fd.bonificacionPct ? Number(fd.bonificacionPct) : 0,
+        alicuotaIvaPct: fd.alicuotaIvaPct ? Number(fd.alicuotaIvaPct) : 21,
+        importeOtrosTributos: fd.importeOtrosTributos ? Number(fd.importeOtrosTributos) : 0,
+
+        cbuEmisor: fd.cbuEmisor || null,
+        aliasCbu: fd.aliasCbu || null,
+        opcionCirculacion: fd.opcionCirculacion || null,
+
+        cae: fd.cae || null,
+        caeVencimiento: fd.caeVencimiento || null,
+
+        estado: "EMITIDA"
+      };
+
+      try {
+        console.log('[POST] /api/facturas', payload);
+        const data = await apiCrearFactura(payload);
+        ensureModal().hide();
+        alert(`Factura emitida Nº ${data.id} (${data.tipo}) a ${data.cliente}.`);
+        if ((location.hash || '').includes('facturas')) await cargarFacturas();
+      } catch (err) {
+        console.error('POST /api/facturas error:', err);
+        alert('No se pudo emitir la factura. Revisá consola/Network.');
+      }
+    });
+  };
+}
+
+
 function wireListarFacturasButton() {
     const btn = document.getElementById('btnVerFacturas');
     const btnBuscar = document.getElementById('btnBuscarFactura');
-    if (btn) {
-        btn.onclick = async () => { await cargarFacturas(); };
-    }
-    if (btnBuscar) {
-        btnBuscar.onclick = async () => { await cargarFacturas(); };
-    }
+    if (btn) btn.onclick = cargarFacturas;
+    if (btnBuscar) btnBuscar.onclick = cargarFacturas;
 }
 
 /* ===== Después de renderizar cada ruta ===== */
 function afterRender(route) {
-    switch (route) {
-        case 'cargas':
-            renderCargasTable();
-            break;
-        case 'aduana':
-            bindAduanaEvents();
-            break;
-        case 'clientes':
-            bindTicketsEvents();
-            break;
-        case 'admin':
-            document.getElementById('btnIrFacturas')?.addEventListener('click', ()=>{ location.hash='#facturas'; });
-            wireListarFacturasButton();
-            wireFacturaButton();
-            break;
-        case 'facturas':
-            wireListarFacturasButton();
-            wireFacturaButton();
-            cargarFacturas();
-            break;
-        default:
-            break;
-    }
+  switch (route) {
+    case 'cargas':
+      renderCargasTable();
+      break;
+
+    case 'aduana':
+      renderLegajos();
+      break;
+
+    case 'clientes':
+      renderTickets();
+      break;
+
+    case 'admin':
+      document.getElementById('btnIrFacturas')?.addEventListener('click', ()=>{ location.hash='#facturas'; });
+      wireListarFacturasButton();
+      wireFacturaButton();
+      break;
+
+    case 'facturas':
+      wireListarFacturasButton();
+      wireFacturaButton();
+      cargarFacturas();
+      break;
+
+    default:
+      break;
+  }
 }
