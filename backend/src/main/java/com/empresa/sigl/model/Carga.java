@@ -2,6 +2,7 @@ package com.empresa.sigl.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cargas")
@@ -40,13 +41,13 @@ public class Carga {
     private String tipo; // 20DV, 40HC, etc.
 
     @Column(precision = 12, scale = 2)
-    private Double tara; // Kg
+    private BigDecimal tara; // Kg
 
     @Column(length = 40)
     private String precinto;
 
     @Column(precision = 12, scale = 2)
-    private Double pesoBruto; // Kg
+    private BigDecimal pesoBruto; // Kg
 
     @Column(length = 120)
     private String chofer;
@@ -91,14 +92,14 @@ public class Carga {
     public String getTipo() { return tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }
 
-    public Double getTara() { return tara; }
-    public void setTara(Double tara) { this.tara = tara; }
+    public BigDecimal getTara() { return tara; }
+    public void setTara(BigDecimal tara) { this.tara = tara; }
 
     public String getPrecinto() { return precinto; }
     public void setPrecinto(String precinto) { this.precinto = precinto; }
 
-    public Double getPesoBruto() { return pesoBruto; }
-    public void setPesoBruto(Double pesoBruto) { this.pesoBruto = pesoBruto; }
+    public BigDecimal getPesoBruto() { return pesoBruto; }
+    public void setPesoBruto(BigDecimal pesoBruto) { this.pesoBruto = pesoBruto; }
 
     public String getChofer() { return chofer; }
     public void setChofer(String chofer) { this.chofer = chofer; }

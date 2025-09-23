@@ -9,14 +9,18 @@
 const API_BASE = 'http://localhost:8080';
 
 /* ============== HELPERS API (GENÉRICOS) ============== */
+// ¡Sin "export"! Y usar siempre API_BASE
 async function apiFetch(path, options = {}) {
-    const init = { ...options };
-    if (init.body) init.headers = { ...(init.headers || {}), 'Content-Type': 'application/json' };
-    const res = await fetch(`${API_BASE}${path}`, init);
-    const txt = await res.text().catch(() => '');
-    if (!res.ok) throw new Error(`API ${res.status}: ${txt || res.statusText}`);
-    return txt ? JSON.parse(txt) : null; // soporta 204
+  const init = { ...options };
+  if (init.body) {
+    init.headers = { ...(init.headers || {}), 'Content-Type': 'application/json' };
+  }
+  const res = await fetch(`${API_BASE}${path}`, init);
+  const txt = await res.text().catch(() => '');
+  if (!res.ok) throw new Error(`API ${res.status}: ${txt || res.statusText}`);
+  return txt ? JSON.parse(txt) : null; // soporta 204
 }
+
 const apiGet    = (p) => apiFetch(p, { method: 'GET' });
 const apiPost   = (p, body) => apiFetch(p, { method: 'POST', body: JSON.stringify(body) });
 const apiPut    = (p, body) => apiFetch(p, { method: 'PUT',  body: JSON.stringify(body) });
@@ -24,12 +28,13 @@ const apiDelete = (p) => apiFetch(p, { method: 'DELETE' });
 
 /* ============== FACTURAS (API) ============== */
 async function apiListarFacturas(cliente) {
-    const path = cliente && cliente.trim()
-        ? `/api/facturas?cliente=${encodeURIComponent(cliente.trim())}`
-        : `/api/facturas`;
-    return apiGet(path);
+  const path = cliente && cliente.trim()
+    ? `/api/facturas?cliente=${encodeURIComponent(cliente.trim())}`
+    : `/api/facturas`;
+  return apiGet(path);
 }
-async function apiCrearFactura(factura) { return apiPost('/api/facturas', factura); }
+const apiCrearFactura   = (factura) => apiPost('/api/facturas', factura);
+const apiAnularFacturaNC = (id)     => apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
 
 /* ============== CARGAS (API) ============== */
 const apiListarCargas      = () => apiGet('/api/cargas');
@@ -128,7 +133,7 @@ const Views = {
                <tbody id="tablaCargas"></tbody>
              </table>
            </div>
-         </div>`;
+         </div>`,
 
     aduana: () => `
     <div class="card p-3">
@@ -672,20 +677,20 @@ async function cargarFacturas() {
         </tr>`;
     }).join('');
 
-    // Anular (NC)
-    tbody.querySelectorAll('[data-action="anular-nc"]').forEach(b=>{
-      b.onclick = async ()=>{
-        const id = b.dataset.id;
-        if (!confirm(`¿Anular factura ${id} con Nota de Crédito?`)) return;
-        try {
-          await apiAnularFacturaNC(id);
-          await cargarFacturas();
-        } catch (e) {
-          console.error(e);
-          alert('No se pudo anular la factura.');
-        }
-      };
-    });
+   // Ver detalle
+   tbody.querySelectorAll('[data-action="ver"]').forEach(b => {
+     b.onclick = async () => {
+       const id = b.dataset.id;
+       try {
+         const f = await apiObtenerFactura(id);  // GET /api/facturas/{id}
+         renderFacturaDetalleModal(f);
+       } catch (e) {
+         console.error(e);
+         alert('No se pudo obtener la factura.');
+       }
+     };
+   });
+
 
     // Nota de Débito
     tbody.querySelectorAll('[data-action="nota-debito"]').forEach(b=>{
@@ -822,6 +827,58 @@ async function anularFactura(id) {
     console.error('PUT /api/facturas/{id}/anular falló:', e);
     alert('Error al anular la factura.');
   }
+}
+
+function abrirModalNotaDebito(id) {
+  openModal({
+    title: `Emitir Nota de Débito (Factura ${id})`,
+    body: `
+      <form id="formND" class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Importe Neto</label>
+          <input type="number" step="0.01" name="importeNeto" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Alícuota IVA (%)</label>
+          <select name="alicuotaIvaPct" class="form-select">
+            <option value="21">21</option>
+            <option value="10.5">10.5</option>
+            <option value="27">27</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Otros Tributos</label>
+          <input type="number" step="0.01" name="otrosTributos" value="0" class="form-control">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">Motivo</label>
+          <input name="motivo" class="form-control" placeholder="Ajuste por ...">
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button class="btn btn-primary" id="btnEmitirND">Emitir ND</button>
+    `
+  });
+
+  document.getElementById('btnEmitirND').onclick = async () => {
+    const fd = Object.fromEntries(new FormData(document.getElementById('formND')));
+    const payload = {
+      importeNeto: Number(fd.importeNeto || 0),
+      alicuotaIvaPct: Number(fd.alicuotaIvaPct || 21),
+      otrosTributos: Number(fd.otrosTributos || 0),
+      motivo: (fd.motivo || '').trim()
+    };
+    try {
+      await apiPost(`/api/facturas/${encodeURIComponent(id)}/nota-debito`, payload);
+      ensureModal().hide();
+      await cargarFacturas();
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo emitir la Nota de Débito.');
+    }
+  };
 }
 
 
@@ -1049,11 +1106,13 @@ function wireFacturaButton() {
 
 
 function wireListarFacturasButton() {
-    const btn = document.getElementById('btnVerFacturas');
-    const btnBuscar = document.getElementById('btnBuscarFactura');
-    if (btn) btn.onclick = cargarFacturas;
-    if (btnBuscar) btnBuscar.onclick = cargarFacturas;
+  const btnAdmin  = document.getElementById('btnVerFacturas');
+  if (btnAdmin) btnAdmin.onclick = () => { location.hash = '#facturas'; };
+
+  const btnBuscar = document.getElementById('btnBuscarFactura'); // este vive en la ruta facturas
+  if (btnBuscar) btnBuscar.onclick = cargarFacturas;
 }
+
 
 /* ===== Después de renderizar cada ruta ===== */
 function afterRender(route) {

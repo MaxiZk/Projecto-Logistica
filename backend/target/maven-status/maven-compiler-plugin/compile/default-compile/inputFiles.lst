@@ -3,6 +3,7 @@ D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\controller\CargaCon
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\controller\FacturaController.java
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\controller\LegajoController.java
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\controller\TicketController.java
+D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\dto\NotaDebitoDTO.java
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\model\Camion.java
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\model\Carga.java
 D:\facultad\Logistica\backend\src\main\java\com\empresa\sigl\model\Chofer.java

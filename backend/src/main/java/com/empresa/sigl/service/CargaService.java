@@ -3,6 +3,7 @@ package com.empresa.sigl.service;
 import com.empresa.sigl.model.Carga;
 import com.empresa.sigl.repository.CargaRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -19,31 +20,42 @@ public class CargaService {
         return repo.findAll();
     }
 
-    public Optional<Carga> obtener(String id) {        // <- String
+    public Optional<Carga> obtener(String id) {
         return repo.findById(id);
     }
 
     public Carga crear(Carga c) {
+        // si querés forzar estado por defecto o normalizar algo, hacelo acá
         return repo.save(c);
     }
 
-    public Optional<Carga> actualizar(String id, Carga datos) {  // <- String
+    public Optional<Carga> actualizar(String id, Carga datos) {
         return repo.findById(id).map(ex -> {
             ex.setCliente(datos.getCliente());
             ex.setOrigen(datos.getOrigen());
             ex.setDestino(datos.getDestino());
             ex.setEstado(datos.getEstado());
-            ex.setTerminal(datos.getTerminal());
+
+            // NOMBRES NUEVOS (coinciden con tu entidad Carga)
+            ex.setTerminalPortuaria(datos.getTerminalPortuaria());
             ex.setContenedor(datos.getContenedor());
-            ex.setTaraKg(datos.getTaraKg());
+            ex.setTara(datos.getTara());
             ex.setPrecinto(datos.getPrecinto());
-            ex.setPesoBrutoKg(datos.getPesoBrutoKg());
+            ex.setPesoBruto(datos.getPesoBruto());
+
             ex.setFecha(datos.getFecha());
+            ex.setTipo(datos.getTipo());
+            ex.setChofer(datos.getChofer());
+            ex.setDniChofer(datos.getDniChofer());
+            ex.setCelularChofer(datos.getCelularChofer());
+            ex.setPatenteTractor(datos.getPatenteTractor());
+            ex.setPatenteSemi(datos.getPatenteSemi());
+
             return repo.save(ex);
         });
     }
 
-    public boolean eliminar(String id) {               // <- String
+    public boolean eliminar(String id) {
         if (!repo.existsById(id)) return false;
         repo.deleteById(id);
         return true;

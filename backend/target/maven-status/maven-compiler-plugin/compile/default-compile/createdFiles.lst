@@ -20,3 +20,4 @@ com\empresa\sigl\model\Factura.class
 com\empresa\sigl\repository\TicketRepository.class
 com\empresa\sigl\service\FacturaService.class
 com\empresa\sigl\model\Legajo.class
+com\empresa\sigl\dto\NotaDebitoDTO.class
