@@ -162,4 +162,7 @@ public class Factura {
 
     public LocalDate getFechaAnulacion() { return fechaAnulacion; }
     public void setFechaAnulacion(LocalDate fechaAnulacion) { this.fechaAnulacion = fechaAnulacion; }
+
+    @Column(name = "factura_origen_id")
+    private Long facturaOrigenId;    // null para facturas normales; seteado en ND/NC que referencian otra
 }

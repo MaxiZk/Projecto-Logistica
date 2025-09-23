@@ -28,6 +28,12 @@ public class FacturaController {
         return repository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
+    @GetMapping("/{id}")
+    public Factura obtener(@PathVariable Long id){
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+    }
+
     @PostMapping
     public ResponseEntity<Factura> crear(@RequestBody Factura f) {
         f.setId(null);
@@ -58,18 +64,74 @@ public class FacturaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+
+    @PostMapping("/{id}/nota-debito")
+    public ResponseEntity<Factura> crearNotaDebito(
+            @PathVariable Long id,
+            @RequestBody NotaDebitoDTO dto // ver DTO abajo
+    ) {
+        Factura origen = repository.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura origen no encontrada"));
+
+        Factura nd = new Factura();
+        nd.setId(null);
+        nd.setFacturaOrigenId(origen.getId());
+
+        // Tipo y código AFIP típicos (ajustá a tu necesidad)
+        nd.setTipo("ND A");                 // o "Nota de Débito A"
+        nd.setCodigoComprobante("02");      // 02 suele ser ND A; para FCE usar 202
+        nd.setPuntoVenta(dto.getPuntoVenta()!=null? dto.getPuntoVenta() : origen.getPuntoVenta());
+        nd.setNumero(dto.getNumero());      // si lo maneja el sistema, puede quedar null
+
+        nd.setFechaEmision(dto.getFechaEmision()!=null? dto.getFechaEmision() : LocalDate.now());
+
+        // Copiamos datos del cliente
+        nd.setCliente(origen.getCliente());
+        nd.setCuit(origen.getCuit());
+        nd.setDomicilio(origen.getDomicilio());
+        nd.setCondicionIVACliente(origen.getCondicionIVACliente());
+        nd.setCondicionVenta(origen.getCondicionVenta());
+
+        // Concepto / detalle ND
+        nd.setDetalle(dto.getDetalle());
+
+        // Si manejás ítems:
+        // podés construir nd.detalles con 1 renglón por el concepto de la ND
+        // o, si no usás items, completar los totales directos:
+        nd.setImporteNetoGravado(dto.getImporteNeto()!=null? dto.getImporteNeto() : 0);
+        nd.setImporteIva(dto.getImporteIva()!=null? dto.getImporteIva() : 0);
+        nd.setImporteOtrosTributos(dto.getImporteOtros()!=null? dto.getImporteOtros() : 0);
+        nd.setImporteTotal(
+                (nd.getImporteNetoGravado()==null?0:nd.getImporteNetoGravado()) +
+                        (nd.getImporteIva()==null?0:nd.getImporteIva()) +
+                        (nd.getImporteOtrosTributos()==null?0:nd.getImporteOtrosTributos())
+        );
+
+        // Datos FCE / bancarios opcionales
+        nd.setCbuEmisor(origen.getCbuEmisor());
+        nd.setAliasCbu(origen.getAliasCbu());
+        nd.setOpcionCirculacion(origen.getOpcionCirculacion());
+
+        nd.setEstado("EMITIDA");
+
+        Factura saved = repository.save(nd);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+
     @PutMapping("/{id}/anular")
-    public ResponseEntity<Factura> anular(@PathVariable Long id, @RequestParam String tipo) {
+    public ResponseEntity<Factura> anular(@PathVariable Long id) {
         Factura fac = repository.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
 
-        String t = tipo == null ? "" : tipo.trim().toUpperCase();
-        if (!t.equals("NC") && !t.equals("ND")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo debe ser NC o ND");
+        if ("ANULADA".equalsIgnoreCase(fac.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La factura ya está anulada");
         }
+        // Marcamos anulación por NC (no generamos aquí el comprobante NC; esto solo marca el estado)
         fac.setEstado("ANULADA");
-        fac.setAnulacionTipo(t);
+        fac.setAnulacionTipo("NC");
         fac.setFechaAnulacion(LocalDate.now());
+
         return ResponseEntity.ok(repository.save(fac));
     }
 

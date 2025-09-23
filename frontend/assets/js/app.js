@@ -93,25 +93,42 @@ const Views = {
     </div>`,
 
     cargas: () => `
-    <div class="card p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h5 class="m-0">Gestión de Cargas</h5>
-          <small class="text-muted">Registrar, ver y seguir órdenes de transporte.</small>
-        </div>
-        ${getRole()==='ADMIN' ? '<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>' : ''}
-      </div>
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead><tr>
-            <th>#</th><th>Cliente</th><th>Origen</th><th>Destino</th>
-            <th>Terminal</th><th>Contenedor</th><th>Precinto</th><th>Peso Bruto</th>
-            <th>Estado</th><th>Acciones</th>
-          </tr></thead>
-          <tbody id="tablaCargas"></tbody>
-        </table>
-      </div>
-    </div>`,
+       <div class="card p-3">
+           <div class="d-flex justify-content-between align-items-center mb-2">
+             <div>
+               <h5 class="m-0">Gestión de Cargas</h5>
+               <small class="text-muted">Registrar, ver y seguir órdenes de transporte.</small>
+             </div>
+             ${getRole()==='ADMIN' ? '<button type="button" class="btn btn-primary" id="btnNuevaCarga">+ Nueva Carga</button>' : ''}
+           </div>
+
+           <div class="table-responsive">
+             <table class="table align-middle">
+               <thead>
+                 <tr>
+                   <th>#</th>
+                   <th>Cliente</th>
+                   <th>Origen</th>
+                   <th>Destino</th>
+                   <th>Terminal</th>
+                   <th>Contenedor</th>
+                   <th>Tipo</th>
+                   <th>Tara (Kg)</th>
+                   <th>Precinto</th>
+                   <th>Peso Bruto (Kg)</th>
+                   <th>Chofer</th>
+                   <th>DNI</th>
+                   <th>Celular</th>
+                   <th>Tractor</th>
+                   <th>Semi</th>
+                   <th>Estado</th>
+                   <th>Acciones</th>
+                 </tr>
+               </thead>
+               <tbody id="tablaCargas"></tbody>
+             </table>
+           </div>
+         </div>`;
 
     aduana: () => `
     <div class="card p-3">
@@ -270,24 +287,37 @@ function openModal({ title = '', body = '', footer = '' }) {
 
 /* ============= CARGAS (UI con delegación) ============= */
 async function renderCargasTable(){
-    const tbody = document.getElementById('tablaCargas');
-    if (!tbody) return;
+  const tbody = document.getElementById('tablaCargas');
+  if (!tbody) return;
 
-    let cargas = [];
-    try { cargas = await apiListarCargas(); }
-    catch(e){ console.error('No se pudieron listar cargas:', e); alert('No se pudieron cargar las cargas.'); return; }
+  let cargas = [];
+  try { cargas = await apiListarCargas(); }
+  catch(e){
+    console.error('No se pudieron listar cargas:', e);
+    alert('No se pudieron cargar las cargas.');
+    return;
+  }
 
-    const isAdmin = getRole()==='ADMIN';
-    tbody.innerHTML = (cargas||[]).map(c=>`
+  const isAdmin = getRole()==='ADMIN';
+  const safe = (v)=> v ?? '';
+
+  tbody.innerHTML = (cargas||[]).map(c=>`
     <tr>
-      <td>${c.id}</td>
-      <td>${c.cliente||''}</td>
-      <td>${c.origen||''}</td>
-      <td>${c.destino||''}</td>
-      <td>${c.terminal||'-'}</td>
-      <td>${c.contenedor||'-'}</td>
-      <td>${c.precinto||'-'}</td>
-      <td>${c.pesoBrutoKg ?? '-'}</td>
+      <td>${safe(c.id)}</td>
+      <td>${safe(c.cliente)}</td>
+      <td>${safe(c.origen)}</td>
+      <td>${safe(c.destino)}</td>
+      <td>${safe(c.terminalPortuaria)}</td>
+      <td>${safe(c.contenedor)}</td>
+      <td>${safe(c.tipo)}</td>
+      <td>${safe(c.tara)}</td>
+      <td>${safe(c.precinto)}</td>
+      <td>${safe(c.pesoBruto)}</td>
+      <td>${safe(c.chofer)}</td>
+      <td>${safe(c.dniChofer)}</td>
+      <td>${safe(c.celularChofer)}</td>
+      <td>${safe(c.patenteTractor)}</td>
+      <td>${safe(c.patenteSemi)}</td>
       <td>${chipEstado(c.estado||'En preparación')}</td>
       <td class="text-nowrap">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ver-carga" data-id="${c.id}">Ver</button>
@@ -296,7 +326,8 @@ async function renderCargasTable(){
           <button type="button" class="btn btn-outline-danger btn-sm" data-action="del-carga" data-id="${c.id}">Eliminar</button>
         ` : ''}
       </td>
-    </tr>`).join('');
+    </tr>
+  `).join('');
 }
 
 // Delegación (una sola vez)
@@ -346,85 +377,171 @@ function setupCargasDelegation(){
 }
 
 function showCargaViewFromObj(c){
-    openModal({
-        title:`Orden ${c.id}`,
-        body: `
+  const safe = (v)=> v ?? '-';
+  openModal({
+    title:`Orden ${safe(c.id)}`,
+    body: `
       <div class="row g-2">
-        <div class="col-md-4"><strong>Cliente:</strong> ${c.cliente||'-'}</div>
-        <div class="col-md-4"><strong>Fecha:</strong> ${c.fecha||'-'}</div>
-        <div class="col-md-4"><strong>Estado:</strong> ${c.estado||'-'}</div>
-        <div class="col-md-3"><strong>Origen:</strong> ${c.origen||'-'}</div>
-        <div class="col-md-3"><strong>Destino:</strong> ${c.destino||'-'}</div>
-        <div class="col-md-3"><strong>Terminal:</strong> ${c.terminal||'-'}</div>
-        <div class="col-md-3"><strong>Contenedor:</strong> ${c.contenedor||'-'}</div>
-        <div class="col-md-3"><strong>Tara (Kg):</strong> ${c.taraKg||'-'}</div>
-        <div class="col-md-3"><strong>Precinto:</strong> ${c.precinto||'-'}</div>
-        <div class="col-md-3"><strong>Peso bruto (Kg):</strong> ${c.pesoBrutoKg||'-'}</div>
+        <div class="col-md-3"><strong>Cliente:</strong> ${safe(c.cliente)}</div>
+        <div class="col-md-3"><strong>Fecha:</strong> ${safe(c.fecha)}</div>
+        <div class="col-md-3"><strong>Estado:</strong> ${safe(c.estado)}</div>
+        <div class="col-md-3"><strong>Tipo:</strong> ${safe(c.tipo)}</div>
+
+        <div class="col-md-3"><strong>Origen:</strong> ${safe(c.origen)}</div>
+        <div class="col-md-3"><strong>Destino:</strong> ${safe(c.destino)}</div>
+        <div class="col-md-3"><strong>Terminal:</strong> ${safe(c.terminalPortuaria)}</div>
+        <div class="col-md-3"><strong>Contenedor:</strong> ${safe(c.contenedor)}</div>
+
+        <div class="col-md-3"><strong>Tara (Kg):</strong> ${safe(c.tara)}</div>
+        <div class="col-md-3"><strong>Precinto:</strong> ${safe(c.precinto)}</div>
+        <div class="col-md-3"><strong>Peso bruto (Kg):</strong> ${safe(c.pesoBruto)}</div>
+        <div class="col-md-3"><strong>—</strong></div>
+
+        <div class="col-md-3"><strong>Chofer:</strong> ${safe(c.chofer)}</div>
+        <div class="col-md-3"><strong>DNI Chofer:</strong> ${safe(c.dniChofer)}</div>
+        <div class="col-md-3"><strong>Celular Chofer:</strong> ${safe(c.celularChofer)}</div>
+        <div class="col-md-3"><strong>Patente Tractor:</strong> ${safe(c.patenteTractor)}</div>
+
+        <div class="col-md-3"><strong>Patente Semi:</strong> ${safe(c.patenteSemi)}</div>
       </div>`
-    });
+  });
 }
 
 function showCargaFormAPI(c){
-    const isEdit = !!c;
-    const init = c || {
-        id:'', cliente:'', origen:'', destino:'', estado:'En preparación',
-        terminal:'', contenedor:'', taraKg:'', precinto:'', pesoBrutoKg:'', fecha:''
-    };
+  const isEdit = !!c;
+  const init = c || {
+    id:'', cliente:'', origen:'', destino:'', estado:'En preparación',
+    fecha:'',
+    terminalPortuaria:'', contenedor:'', tipo:'',
+    tara:'', precinto:'', pesoBruto:'',
+    chofer:'', dniChofer:'', celularChofer:'',
+    patenteTractor:'', patenteSemi:''
+  };
 
-    openModal({
-        title: isEdit? `Editar carga ${init.id}`:'Nueva Carga',
-        body: `
+  openModal({
+    title: isEdit? `Editar carga ${init.id}` : 'Nueva Carga',
+    body: `
       <form id="formCarga" class="row g-3">
-        <div class="col-md-3"><label class="form-label">ID Orden</label>
-          <input class="form-control" name="id" value="${init.id||''}" ${isEdit?'readonly':''} required></div>
-        <div class="col-md-5"><label class="form-label">Cliente</label>
-          <input class="form-control" name="cliente" value="${init.cliente||''}" required></div>
-        <div class="col-md-2"><label class="form-label">Fecha</label>
-          <input type="date" class="form-control" name="fecha" value="${init.fecha||''}"></div>
-        <div class="col-md-2"><label class="form-label">Estado</label>
+        <div class="col-md-2">
+          <label class="form-label">ID Orden</label>
+          <input class="form-control" name="id" value="${init.id||''}" ${isEdit?'readonly':''} required>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Cliente</label>
+          <input class="form-control" name="cliente" value="${init.cliente||''}" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Fecha</label>
+          <input type="date" class="form-control" name="fecha" value="${init.fecha||''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Estado</label>
           <select class="form-select" name="estado">
             ${['En preparación','En tránsito','Entregado','Demorado'].map(e=>`<option ${e===init.estado?'selected':''}>${e}</option>`).join('')}
-          </select></div>
+          </select>
+        </div>
 
-        <div class="col-md-3"><label class="form-label">Origen</label>
-          <input class="form-control" name="origen" value="${init.origen||''}" required></div>
-        <div class="col-md-3"><label class="form-label">Destino</label>
-          <input class="form-control" name="destino" value="${init.destino||''}" required></div>
-        <div class="col-md-3"><label class="form-label">Terminal</label>
-          <input class="form-control" name="terminal" value="${init.terminal||''}"></div>
-        <div class="col-md-3"><label class="form-label">Contenedor</label>
-          <input class="form-control" name="contenedor" value="${init.contenedor||''}"></div>
+        <div class="col-md-4">
+          <label class="form-label">Origen</label>
+          <input class="form-control" name="origen" value="${init.origen||''}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Destino</label>
+          <input class="form-control" name="destino" value="${init.destino||''}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Terminal Portuaria</label>
+          <input class="form-control" name="terminalPortuaria" value="${init.terminalPortuaria||''}">
+        </div>
 
-        <div class="col-md-3"><label class="form-label">Tara (Kg)</label>
-          <input class="form-control" name="taraKg" value="${init.taraKg||''}"></div>
-        <div class="col-md-3"><label class="form-label">Precinto</label>
-          <input class="form-control" name="precinto" value="${init.precinto||''}"></div>
-        <div class="col-md-3"><label class="form-label">Peso bruto (Kg)</label>
-          <input class="form-control" name="pesoBrutoKg" value="${init.pesoBrutoKg||''}"></div>
-      </form>`,
-        footer:`<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button class="btn btn-primary" id="saveCarga">${isEdit?'Guardar':'Crear'}</button>`
-    });
+        <div class="col-md-4">
+          <label class="form-label">Contenedor</label>
+          <input class="form-control" name="contenedor" value="${init.contenedor||''}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Tipo</label>
+          <input class="form-control" name="tipo" value="${init.tipo||''}" placeholder="20DV, 40HC, etc.">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Precinto</label>
+          <input class="form-control" name="precinto" value="${init.precinto||''}">
+        </div>
 
-    document.getElementById('saveCarga').onclick = async ()=>{
-        const fd = Object.fromEntries(new FormData(document.getElementById('formCarga')));
-        const payload = {
-            id: fd.id, cliente: fd.cliente, origen: fd.origen, destino: fd.destino, estado: fd.estado,
-            terminal: fd.terminal, contenedor: fd.contenedor, taraKg: fd.taraKg,
-            precinto: fd.precinto, pesoBrutoKg: fd.pesoBrutoKg, fecha: fd.fecha || null
-        };
+        <div class="col-md-4">
+          <label class="form-label">Tara (Kg)</label>
+          <input type="number" step="0.01" class="form-control" name="tara" value="${init.tara||''}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Peso bruto (Kg)</label>
+          <input type="number" step="0.01" class="form-control" name="pesoBruto" value="${init.pesoBruto||''}">
+        </div>
 
-        try{
-            if(isEdit) await apiActualizarCarga(fd.id, payload);
-            else       await apiCrearCarga(payload);
-            ensureModal().hide();
-            await renderCargasTable();
-        }catch(e){
-            console.error(e);
-            alert('No se pudo guardar la carga.');
-        }
+        <div class="col-md-4">
+          <label class="form-label">Chofer</label>
+          <input class="form-control" name="chofer" value="${init.chofer||''}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">DNI Chofer</label>
+          <input class="form-control" name="dniChofer" value="${init.dniChofer||''}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Celular Chofer</label>
+          <input class="form-control" name="celularChofer" value="${init.celularChofer||''}">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Patente Tractor</label>
+          <input class="form-control" name="patenteTractor" value="${init.patenteTractor||''}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Patente Semi</label>
+          <input class="form-control" name="patenteSemi" value="${init.patenteSemi||''}">
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button class="btn btn-primary" id="saveCarga">${isEdit?'Guardar':'Crear'}</button>
+    `
+  });
+
+  document.getElementById('saveCarga').onclick = async ()=>{
+    const fd = Object.fromEntries(new FormData(document.getElementById('formCarga')));
+
+    const payload = {
+      id: fd.id,
+      cliente: fd.cliente,
+      origen: fd.origen,
+      destino: fd.destino,
+      estado: fd.estado,
+      fecha: fd.fecha || null,
+
+      terminalPortuaria: fd.terminalPortuaria || null,
+      contenedor: fd.contenedor || null,
+      tipo: fd.tipo || null,
+      tara: fd.tara ? Number(fd.tara) : null,
+      precinto: fd.precinto || null,
+      pesoBruto: fd.pesoBruto ? Number(fd.pesoBruto) : null,
+
+      chofer: fd.chofer || null,
+      dniChofer: fd.dniChofer || null,
+      celularChofer: fd.celularChofer || null,
+      patenteTractor: fd.patenteTractor || null,
+      patenteSemi: fd.patenteSemi || null
     };
+
+    try{
+      if(isEdit) await apiActualizarCarga(fd.id, payload);
+      else       await apiCrearCarga(payload);
+      ensureModal().hide();
+      await renderCargasTable();
+    }catch(e){
+      console.error(e);
+      alert('No se pudo guardar la carga.');
+    }
+  };
 }
+
 
 /* ============= LEGAJOS / TICKETS (UI) ============= */
 async function renderLegajos(){
@@ -506,9 +623,17 @@ async function cargarFacturas() {
       const nro = f?.numero     != null ? String(f.numero).padStart(8,'0')
                                         : (f?.id != null ? String(f.id).padStart(8,'0') : '--------');
       const comp = `${pv}-${nro}`;
-      const acc = (f?.estado !== 'ANULADA')
-        ? `<button class="btn btn-outline-danger btn-sm" data-action="anular" data-id="${f?.id}">Anular</button>`
-        : `<span class="badge text-bg-secondary">Anulada ${f?.anulacionTipo ? '('+f.anulacionTipo+')' : ''}</span>`;
+      const acc = `
+        <button class="btn btn-outline-secondary btn-sm" data-action="ver" data-id="${f?.id}">Ver</button>
+        ${
+          f?.estado !== 'ANULADA'
+            ? `
+               <button class="btn btn-outline-danger btn-sm ms-1" data-action="anular-nc" data-id="${f?.id}">Anular (NC)</button>
+               <button class="btn btn-outline-primary btn-sm ms-1" data-action="nota-debito" data-id="${f?.id}">Nota de Débito</button>
+              `
+            : `<span class="badge text-bg-secondary ms-1">Anulada (NC)</span>`
+        }
+      `;
 
       // Campo “detalle” visible: si hay items, muestro la 1ª línea; si no, uso f.detalle.
       let detalleVis = safe(f?.detalle);
@@ -547,15 +672,13 @@ async function cargarFacturas() {
         </tr>`;
     }).join('');
 
-    // Botones “Anular”
-    tbody.querySelectorAll('[data-action="anular"]').forEach(b => {
-      b.onclick = async () => {
+    // Anular (NC)
+    tbody.querySelectorAll('[data-action="anular-nc"]').forEach(b=>{
+      b.onclick = async ()=>{
         const id = b.dataset.id;
-        const input = prompt('Anular con: escribí "NC" o "ND"');
-        const tipo  = (input || '').trim().toUpperCase();
-        if (tipo !== 'NC' && tipo !== 'ND') { alert('Debe ser NC o ND'); return; }
+        if (!confirm(`¿Anular factura ${id} con Nota de Crédito?`)) return;
         try {
-          await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=${encodeURIComponent(tipo)}`);
+          await apiAnularFacturaNC(id);
           await cargarFacturas();
         } catch (e) {
           console.error(e);
@@ -564,12 +687,120 @@ async function cargarFacturas() {
       };
     });
 
+    // Nota de Débito
+    tbody.querySelectorAll('[data-action="nota-debito"]').forEach(b=>{
+      b.onclick = ()=> abrirModalNotaDebito(b.dataset.id);
+    });
+
     return data;
   } catch (e) {
     console.error('GET /api/facturas fallo:', e);
     alert('No se pudo cargar el listado de facturas.');
     return [];
   }
+}
+
+function renderFacturaDetalleModal(f){
+  const fmt = (v) => (v==null || v==='') ? '-' : v;
+  const fmtn = (v) => Number(v ?? 0).toFixed(2);
+
+  // Items (si hay)
+  let itemsHtml = '<div class="text-muted">Sin ítems</div>';
+  if (Array.isArray(f.detalles) && f.detalles.length){
+    const filas = f.detalles.map((it, i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${fmt(it.descripcion)}</td>
+        <td class="text-end">${fmt(it.unidadMedida || 'u')}</td>
+        <td class="text-end">${Number(it.cantidad ?? 0)}</td>
+        <td class="text-end">${fmtn(it.precioUnitario)}</td>
+        <td class="text-end">${fmtn((it.cantidad??0) * (it.precioUnitario??0))}</td>
+      </tr>
+    `).join('');
+    itemsHtml = `
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>#</th><th>Descripción</th><th class="text-end">U.M.</th>
+              <th class="text-end">Cant.</th><th class="text-end">Precio</th><th class="text-end">Importe</th>
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // Totales (si no vienen, los calculo)
+  let neto   = f.importeNetoGravado;
+  let iva    = f.importeIva;
+  let otros  = f.importeOtrosTributos;
+  let total  = f.importeTotal;
+
+  if ((neto==null || total==null) && Array.isArray(f.detalles)) {
+    const sum = f.detalles.reduce((acc, it)=> acc + Number(it.cantidad ?? 0)*Number(it.precioUnitario ?? 0), 0);
+    if (neto == null)  neto = sum;
+    if (iva  == null)  iva  = 0;
+    if (otros== null)  otros= 0;
+    if (total== null)  total= neto + iva + otros;
+  }
+
+  const comp = `${String(f.puntoVenta ?? '--').toString().padStart(5,'0')}-${String(f.numero ?? f.id ?? 0).toString().padStart(8,'0')}`;
+
+  openModal({
+    title: `Factura ${fmt(f.tipo)} • ${comp}`,
+    body: `
+      <div class="row g-2 mb-2">
+        <div class="col-md-4"><strong>Cliente:</strong> ${fmt(f.cliente)}</div>
+        <div class="col-md-3"><strong>CUIT:</strong> ${fmt(f.cuit)}</div>
+        <div class="col-md-3"><strong>Fecha emisión:</strong> ${fmt(f.fechaEmision) || fmt(f.fecha)}</div>
+        <div class="col-md-2"><strong>Estado:</strong> ${fmt(f.estado)}</div>
+
+        <div class="col-md-6"><strong>Domicilio:</strong> ${fmt(f.domicilio)}</div>
+        <div class="col-md-3"><strong>Cond. IVA:</strong> ${fmt(f.condicionIVACliente)}</div>
+        <div class="col-md-3"><strong>Cond. Venta:</strong> ${fmt(f.condicionVenta)}</div>
+
+        <div class="col-md-3"><strong>Vto. Pago:</strong> ${fmt(f.fechaVencimientoPago)}</div>
+        <div class="col-md-3"><strong>Período desde:</strong> ${fmt(f.periodoDesde)}</div>
+        <div class="col-md-3"><strong>Período hasta:</strong> ${fmt(f.periodoHasta)}</div>
+
+        <div class="col-md-12"><strong>Detalle (cabecera):</strong><br>${fmt(f.detalle)}</div>
+      </div>
+
+      <h6 class="mt-3">Ítems</h6>
+      ${itemsHtml}
+
+      <div class="row g-2 mt-2">
+        <div class="col-md-3"><strong>Neto gravado:</strong> ${fmtn(neto)}</div>
+        <div class="col-md-3"><strong>IVA:</strong> ${fmtn(iva)}</div>
+        <div class="col-md-3"><strong>Otros tributos:</strong> ${fmtn(otros)}</div>
+        <div class="col-md-3"><strong>Total:</strong> <span class="fw-semibold">${fmtn(total)}</span></div>
+      </div>
+
+      <hr class="my-2">
+
+      <div class="row g-2">
+        <div class="col-md-3"><strong>CAE:</strong> ${fmt(f.cae)}</div>
+        <div class="col-md-3"><strong>Vto. CAE:</strong> ${fmt(f.caeVencimiento)}</div>
+        <div class="col-md-3"><strong>CBU:</strong> ${fmt(f.cbuEmisor)}</div>
+        <div class="col-md-3"><strong>Alias:</strong> ${fmt(f.aliasCbu)}</div>
+        <div class="col-md-12"><strong>Opción de circulación:</strong> ${fmt(f.opcionCirculacion)}</div>
+      </div>
+
+      ${f.estado==='ANULADA' ? `
+        <div class="alert alert-warning mt-3 mb-0">
+          <strong>Factura ANULADA</strong> ${f.anulacionTipo ? 'por '+f.anulacionTipo : ''} ${f.fechaAnulacion ? 'el '+f.fechaAnulacion : ''}.
+        </div>` : ''}
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+    `
+  });
+}
+
+
+async function apiObtenerFactura(id){
+    return apiGet(`/api/facturas/${encodeURIComponent(id)}`);
 }
 
 

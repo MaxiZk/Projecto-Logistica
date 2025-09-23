@@ -1,66 +1,117 @@
 package com.empresa.sigl.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDate;
 
-@Data
 @Entity
-@Table(name = "carga")
+@Table(name = "cargas")
 public class Carga {
 
+    /**
+     * Si tu ID era numérico (Long con @GeneratedValue), cambiá este String por Long
+     * y ajustá el Repository y Controller: JpaRepository<Carga, Long>, etc.
+     */
     @Id
-    @Column(length = 40)     // ej: ORD-101
+    @Column(length = 64) // id tipo “ORD-123” o similar
     private String id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
     private String cliente;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String origen;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String destino;
 
-    private String terminal;
-    private String contenedor;
-    private String tipo;
-    private String taraKg;
-    private String precinto;
-    private String pesoBrutoKg;
+    @Column(length = 60)
+    private String estado; // En preparación / En tránsito / Entregado / Demorado
 
     private LocalDate fecha;
 
-    @Column(length = 30, nullable = false)
-    private String estado;   // En preparación / En tránsito / Entregado / Demorado
+    // --- Campos nuevos / extendidos ---
+    @Column(length = 120)
+    private String terminalPortuaria;
 
-    // ---------- Embebidos con columnas prefijadas ----------
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "nombre",   column = @Column(name = "chofer_nombre")),
-            @AttributeOverride(name = "dni",      column = @Column(name = "chofer_dni")),
-            @AttributeOverride(name = "cel",      column = @Column(name = "chofer_cel")),
-            @AttributeOverride(name = "usuario",  column = @Column(name = "chofer_usuario")),
-            @AttributeOverride(name = "password", column = @Column(name = "chofer_password"))
-    })
-    private Chofer chofer;
+    @Column(length = 20)
+    private String contenedor;
 
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "marca",   column = @Column(name = "camion_marca")),
-            @AttributeOverride(name = "modelo",  column = @Column(name = "camion_modelo")),
-            @AttributeOverride(name = "anio",    column = @Column(name = "camion_anio")),
-            @AttributeOverride(name = "patente", column = @Column(name = "camion_patente")),
-            @AttributeOverride(name = "sat",     column = @Column(name = "camion_sat"))
-    })
-    private Camion camion;
+    @Column(length = 20)
+    private String tipo; // 20DV, 40HC, etc.
 
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "marca",   column = @Column(name = "semi_marca")),
-            @AttributeOverride(name = "modelo",  column = @Column(name = "semi_modelo")),
-            @AttributeOverride(name = "anio",    column = @Column(name = "semi_anio")),
-            @AttributeOverride(name = "patente", column = @Column(name = "semi_patente"))
-    })
-    private Semi semi;
+    @Column(precision = 12, scale = 2)
+    private Double tara; // Kg
+
+    @Column(length = 40)
+    private String precinto;
+
+    @Column(precision = 12, scale = 2)
+    private Double pesoBruto; // Kg
+
+    @Column(length = 120)
+    private String chofer;
+
+    @Column(length = 20)
+    private String dniChofer;
+
+    @Column(length = 30)
+    private String celularChofer;
+
+    @Column(length = 15)
+    private String patenteTractor;
+
+    @Column(length = 15)
+    private String patenteSemi;
+
+    // --- Getters / Setters ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getCliente() { return cliente; }
+    public void setCliente(String cliente) { this.cliente = cliente; }
+
+    public String getOrigen() { return origen; }
+    public void setOrigen(String origen) { this.origen = origen; }
+
+    public String getDestino() { return destino; }
+    public void setDestino(String destino) { this.destino = destino; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+
+    public LocalDate getFecha() { return fecha; }
+    public void setFecha(LocalDate fecha) { this.fecha = fecha; }
+
+    public String getTerminalPortuaria() { return terminalPortuaria; }
+    public void setTerminalPortuaria(String terminalPortuaria) { this.terminalPortuaria = terminalPortuaria; }
+
+    public String getContenedor() { return contenedor; }
+    public void setContenedor(String contenedor) { this.contenedor = contenedor; }
+
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
+
+    public Double getTara() { return tara; }
+    public void setTara(Double tara) { this.tara = tara; }
+
+    public String getPrecinto() { return precinto; }
+    public void setPrecinto(String precinto) { this.precinto = precinto; }
+
+    public Double getPesoBruto() { return pesoBruto; }
+    public void setPesoBruto(Double pesoBruto) { this.pesoBruto = pesoBruto; }
+
+    public String getChofer() { return chofer; }
+    public void setChofer(String chofer) { this.chofer = chofer; }
+
+    public String getDniChofer() { return dniChofer; }
+    public void setDniChofer(String dniChofer) { this.dniChofer = dniChofer; }
+
+    public String getCelularChofer() { return celularChofer; }
+    public void setCelularChofer(String celularChofer) { this.celularChofer = celularChofer; }
+
+    public String getPatenteTractor() { return patenteTractor; }
+    public void setPatenteTractor(String patenteTractor) { this.patenteTractor = patenteTractor; }
+
+    public String getPatenteSemi() { return patenteSemi; }
+    public void setPatenteSemi(String patenteSemi) { this.patenteSemi = patenteSemi; }
 }
