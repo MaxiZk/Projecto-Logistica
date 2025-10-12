@@ -6,7 +6,7 @@
 
 /* ==================== CONFIG ==================== */
 // 👉 Cambiá si tu backend corre en otra URL/puerto
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'https://projecto-logistica-production.up.railway.app';
 
 /* ============== HELPERS API (GENÉRICOS) ============== */
 // ¡Sin "export"! Y usar siempre API_BASE
