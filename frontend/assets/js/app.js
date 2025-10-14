@@ -86,15 +86,93 @@ function canAccess(route){ return (ROLE_ROUTES[getRole()] || []).includes(route)
 const Views = {
     home: () => `
     <div class="card p-4">
-      <h4 class="mb-3">Zuidwijk & Asociados SRL</h4>
-      <p>Zuidwijk & Asociados es una <strong>empresa joven</strong>, con personal de amplia y reconocida experiencia en el mercado.</p>
-      <p>Somos <strong>Consultores en Comercio Exterior</strong>. Analizamos su negocio integralmente, optimizamos su cadena logística y mejoramos tiempos y rentabilidad.</p>
-      <p>Nuestra <strong>misión</strong> es ofrecer servicios integrales en el manejo de mercaderías con <em>responsabilidad</em> y <em>experiencia</em>.</p>
-      <h6 class="mt-3">Aliados estratégicos:</h6>
-      <ul class="mb-2">
-        <li>Terminales portuarias</li><li>Transportistas</li><li>Despachantes</li><li>Depósitos para des/consolidados</li><li>Seguros</li>
-      </ul>
-      <p><strong>¿Por qué elegirnos?</strong> Vemos su negocio como propio y lo analizamos desde todas las perspectivas para encontrar juntos la forma de hacerlo más productivo.</p>
+<section class="hero-landing position-relative">
+  <div id="heroCarousel" class="carousel slide h-100" data-bs-ride="carousel" data-bs-interval="5000">
+    <div class="carousel-inner h-100">
+      <div class="carousel-item active h-100" 
+           style="background-image:url('.//img/hero-camiones.jpg')"></div>
+      <div class="carousel-item h-100" 
+           style="background-image:url('./img/hero-salar-recto.jpg')"></div>
+      <div class="carousel-item h-100" 
+           style="background-image:url('./img/hero-camino-curva.jpg')"></div>
+    </div>
+
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Anterior</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Siguiente</span>
+    </button>
+  </div>
+
+  <div class="overlay"></div>
+
+  <div class="content container">
+    <div class="col-lg-10 col-xl-8 mx-auto">
+      <h1 class="display-4 mb-3">
+        Logística inteligente en minería y comercio exterior
+      </h1>
+      <p class="lead mb-4">
+        Trazabilidad de cargas, facturación y atención de clientes, todo en un solo lugar.
+        Optimice tiempos, costos y seguridad operativa.
+      </p>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="#login" class="btn btn-primary btn-lg px-4">
+          Iniciar sesión
+        </a>
+        <a href="#clientes" class="btn btn-outline-light btn-lg px-4">
+          Explorar
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5 features-landing">
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card card-soft p-4 h-100">
+        <div class="icon mb-3"><i class="bi bi-truck"></i></div>
+        <h5 class="mb-2">Gestión de Cargas</h5>
+        <p class="mb-0">Alta, seguimiento y control de órdenes de transporte, choferes, unidades y estados.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-soft p-4 h-100">
+        <div class="icon mb-3"><i class="bi bi-clipboard-check"></i></div>
+        <h5 class="mb-2">Aduana & Legajos</h5>
+        <p class="mb-0">Documentación, legajos, tickets y coordinación de procesos aduaneros con trazabilidad.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-soft p-4 h-100">
+        <div class="icon mb-3"><i class="bi bi-receipt"></i></div>
+        <h5 class="mb-2">Facturación</h5>
+        <p class="mb-0">Emisión de facturas, notas de crédito/débito y control de cobranzas con indicadores.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container pb-5">
+  <div class="cta-landing p-4 p-md-5">
+    <div class="glow"></div>
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <h3 class="mb-2">Todo en un único panel</h3>
+        <p class="mb-0">Acceda a su operación en tiempo real y tome decisiones con datos. 
+        Soportado por infraestructura cloud y seguridad por roles.</p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        <a href="#login" class="btn btn-light btn-lg">Comenzar ahora</a>
+      </div>
+    </div>
+  </div>
+</section>
+\`;
+
     </div>`,
 
     cargas: () => `
