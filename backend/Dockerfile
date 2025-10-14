@@ -1,20 +1,29 @@
-# syntax=docker/dockerfile:1
+# ===== Etapa de build =====
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 
-# Copio wrapper y pom desde backend
-COPY backend/.mvn .mvn
-COPY backend/mvnw .
-COPY backend/pom.xml .
-COPY backend/src ./src
+# Copiamos Maven Wrapper y configuración
+COPY mvnw .
+COPY .mvn .mvn
 
-RUN chmod +x ./mvnw
+# Copiamos pom.xml y código fuente
+COPY pom.xml .
+COPY src ./src
+
+# Damos permisos al wrapper y construimos el jar
+RUN chmod +x mvnw
 RUN ./mvnw -DskipTests=true clean package
 
+
+# ===== Etapa de runtime =====
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+
+# Copiamos el jar generado desde la etapa anterior
 COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 8080
-ENV JAVA_OPTS=""
-CMD ["sh","-c","java $JAVA_OPTS -Dserver.port=$PORT -jar app.jar"]
+# Expone el puerto (Render usa PORT automáticamente)
+EXPOSE 10000
+
+# Comando de arranque
+CMD ["java", "-jar", "app.jar"]
