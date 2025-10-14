@@ -1,30 +1,17 @@
-# ===== Etapa de build =====
+# Etapa de build
 FROM eclipse-temurin:17-jdk AS build
-WORKDIR /app
-
-# Copiamos Maven Wrapper y configuración
-COPY mvnw .
-COPY .mvn .mvn
-
-# Copiamos pom.xml y código fuente
-COPY pom.xml .
-COPY src ./src
-
-# Damos permisos al wrapper y construimos el jar
-RUN chmod +x mvnw
+WORKDIR /workspace
+COPY . .
+# usa el wrapper si está; si no está, cambia a: RUN mvn -DskipTests clean package
 RUN ./mvnw -DskipTests=true clean package
 
-
-# ===== Etapa de runtime =====
+# Etapa de runtime
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+COPY --from=build /workspace/target/*.jar app.jar
 
-# Copiamos el jar generado desde la etapa anterior
-COPY --from=build /app/target/*.jar app.jar
-
-# Expone el puerto (Render usa PORT automáticamente)
-EXPOSE 10000
-
-# Comando de arranque
-CMD ["java", "-jar", "app.jar"]
+# Railway/Heroku ponen PORT en env; Spring lo toma por application.properties
+ENV PORT=8080
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","/app/app.jar"]
 
