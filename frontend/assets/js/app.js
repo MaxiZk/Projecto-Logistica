@@ -6,25 +6,25 @@
 
 /* ==================== CONFIG ==================== */
 // 👉 Cambiá si tu backend corre en otra URL/puerto
-const API_BASE = 'https://projecto-logistica-production.up.railway.app';
+const API_BASE = 'https://backend-outm.onrender.com';
 
 /* ============== HELPERS API (GENÉRICOS) ============== */
 // ¡Sin "export"! Y usar siempre API_BASE
 async function apiFetch(path, options = {}) {
   const init = { ...options };
-  if (init.body) {
+  // si NO usás cookies/sesiones, mejor no enviar credentials
+  // init.credentials = 'include';  // <- comentado si no lo necesitás
+  if (init.body && !init.headers?.['Content-Type']) {
     init.headers = { ...(init.headers || {}), 'Content-Type': 'application/json' };
   }
   const res = await fetch(`${API_BASE}${path}`, init);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const txt = await res.text().catch(() => '');
-  if (!res.ok) throw new Error(`API ${res.status}: ${txt || res.statusText}`);
-  return txt ? JSON.parse(txt) : null; // soporta 204
+  return txt ? JSON.parse(txt) : null;
 }
+const apiGet  = (p)        => apiFetch(p, { method: 'GET' });
+const apiPost = (p, body)  => apiFetch(p, { method: 'POST', body: JSON.stringify(body) });
 
-const apiGet    = (p) => apiFetch(p, { method: 'GET' });
-const apiPost   = (p, body) => apiFetch(p, { method: 'POST', body: JSON.stringify(body) });
-const apiPut    = (p, body) => apiFetch(p, { method: 'PUT',  body: JSON.stringify(body) });
-const apiDelete = (p) => apiFetch(p, { method: 'DELETE' });
 
 /* ============== FACTURAS (API) ============== */
 async function apiListarFacturas(cliente) {
