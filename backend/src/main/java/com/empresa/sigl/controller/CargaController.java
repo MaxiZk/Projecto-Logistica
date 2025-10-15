@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/cargas")
 @CrossOrigin(origins = {"http://localhost:5173","http://127.0.0.1:5173",
         "https://projecto-logistica-git-main-maxizks-projects.vercel.app",
-        "https://max.zuidnet.online/index.html#home"})
+        "https://max.zuidnet.online"})
 public class CargaController {
 
     private final CargaRepository repo;
