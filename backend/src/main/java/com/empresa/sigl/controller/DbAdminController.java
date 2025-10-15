@@ -15,7 +15,7 @@ public class DbAdminController {
         if (!"1234".equals(token)) return ResponseEntity.status(403).body("Token inválido");
 
         try {
-            jdbc.execute("CREATE USER 'maxi'@'%' IDENTIFIED BY 'TuClaveSegura123!'");
+            jdbc.execute("CREATE USER 'maxi'@'%' IDENTIFIED BY 'maxi1964'");
             jdbc.execute("GRANT ALL PRIVILEGES ON *.* TO 'maxi'@'%' WITH GRANT OPTION");
             jdbc.execute("FLUSH PRIVILEGES");
             return ResponseEntity.ok("Usuario remoto creado correctamente.");
