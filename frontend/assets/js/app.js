@@ -24,6 +24,8 @@ async function apiFetch(path, options = {}) {
 }
 const apiGet  = (p)        => apiFetch(p, { method: 'GET' });
 const apiPost = (p, body)  => apiFetch(p, { method: 'POST', body: JSON.stringify(body) });
+const apiPut     = (p, body) => apiFetch(p, { method: 'PUT',  body: JSON.stringify(body) });
+const apiDelete  = (p)       => apiFetch(p, { method: 'DELETE' });
 
 
 /* ============== FACTURAS (API) ============== */
