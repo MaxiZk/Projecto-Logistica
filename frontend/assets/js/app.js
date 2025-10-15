@@ -758,6 +758,7 @@ async function cargarFacturas() {
     }).join('');
 
     /* ============ EVENTOS PARA TABLA DE FACTURAS (delegación) ============ */
+// Delegación (afuera de cargarFacturas)
 (function () {
   let FACTURAS_EVENTS_WIRED = false;
 
@@ -765,7 +766,7 @@ async function cargarFacturas() {
     if (FACTURAS_EVENTS_WIRED) return;
 
     const tbody = document.getElementById('tablaFacturas');
-    if (!tbody) return; // si aún no se pintó, no marcamos wired
+    if (!tbody) return;
 
     FACTURAS_EVENTS_WIRED = true;
 
@@ -780,16 +781,24 @@ async function cargarFacturas() {
         if (action === 'anular-nc') {
           if (!confirm('¿Anular esta factura con Nota de Crédito (NC)?')) return;
 
-          // Si tu backend espera POST:
-          await apiPost(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
-          // Si no anda, probá con PUT:
-          // await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
+          // ⬇︎ BACKEND ESPERA PUT
+          await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
+          // Si tu backend en realidad espera el tipo en el body:
+          // await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular`, { tipo: 'NC' });
 
           await cargarFacturas();
         }
       } catch (e) {
         console.error('Error en anular-nc:', e);
-        alert('No se pudo anular la factura.');
+
+        // Fallback por si el backend acepta POST
+        try {
+          await apiPost(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
+          await cargarFacturas();
+        } catch (e2) {
+          console.error('POST de anular también falló:', e2);
+          alert('No se pudo anular la factura (405). Revisá si el backend acepta PUT o POST.');
+        }
       }
     });
   };
