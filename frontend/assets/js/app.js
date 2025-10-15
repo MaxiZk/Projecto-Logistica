@@ -757,6 +757,44 @@ async function cargarFacturas() {
         </tr>`;
     }).join('');
 
+    /* ============ EVENTOS PARA TABLA DE FACTURAS (delegación) ============ */
+(function () {
+  let FACTURAS_EVENTS_WIRED = false;
+
+  window.setupFacturasDelegation = function () {
+    if (FACTURAS_EVENTS_WIRED) return;
+
+    const tbody = document.getElementById('tablaFacturas');
+    if (!tbody) return; // si aún no se pintó, no marcamos wired
+
+    FACTURAS_EVENTS_WIRED = true;
+
+    tbody.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      try {
+        if (action === 'anular-nc') {
+          if (!confirm('¿Anular esta factura con Nota de Crédito (NC)?')) return;
+
+          // Si tu backend espera POST:
+          await apiPost(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
+          // Si no anda, probá con PUT:
+          // await apiPut(`/api/facturas/${encodeURIComponent(id)}/anular?tipo=NC`, {});
+
+          await cargarFacturas();
+        }
+      } catch (e) {
+        console.error('Error en anular-nc:', e);
+        alert('No se pudo anular la factura.');
+      }
+    });
+  };
+})();
+
    // Ver detalle
    tbody.querySelectorAll('[data-action="ver"]').forEach(b => {
      b.onclick = async () => {
@@ -1219,6 +1257,7 @@ function afterRender(route) {
       wireListarFacturasButton();
       wireFacturaButton();
       cargarFacturas();
+      setupFacturasDelegation();
       break;
 
     default:
